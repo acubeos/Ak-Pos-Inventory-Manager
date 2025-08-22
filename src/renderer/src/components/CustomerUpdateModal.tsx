@@ -1,5 +1,6 @@
-import { JSX, useEffect, useState } from 'react'
+import { JSX, useEffect } from 'react'
 import { CreateCustomerData } from 'src/main/api.types'
+import { SubmitHandler, useForm } from 'react-hook-form'
 
 interface Props {
   selectedCustomer: CreateCustomerData | null
@@ -8,37 +9,56 @@ interface Props {
 }
 
 const CustomerUpdateModal = ({ selectedCustomer, onClose, onUpdated }: Props): JSX.Element => {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors }
+  } = useForm<CreateCustomerData>()
 
   useEffect(() => {
     if (selectedCustomer) {
-      setName(selectedCustomer.name || '')
-      setPhone(selectedCustomer.phone || '')
-      setAddress(selectedCustomer.address || '')
+      reset({
+        name: selectedCustomer.name || '',
+        phone: selectedCustomer.phone || '',
+        address: selectedCustomer.address || ''
+      })
+    } else {
+      reset({ name: '', phone: '', address: '' })
     }
-  }, [selectedCustomer])
+  }, [selectedCustomer, reset])
 
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault()
+  const submitHandler: SubmitHandler<CreateCustomerData> = async (data) => {
     if (!selectedCustomer) return
 
     try {
       const res = await window.electronAPI?.customers.update(selectedCustomer.id!, {
-        name,
-        phone,
-        address
+        ...data
       })
 
       if (res.success) {
-        onUpdated(res.data) // notify parent to refresh state
+        onUpdated(res.data)
         onClose()
+        const toast = document.createElement('div')
+        toast.className = 'toast toast-top toast-center'
+        toast.innerHTML = `<div class="alert alert-error px-5 py-2">${res.data.name} Modified successfully!</div>`
+        document.body.appendChild(toast)
+        setTimeout(() => toast.remove(), 3000)
       } else {
-        alert('Update failed: ' + res.error)
+        // alert('Update failed: ' + res.error)
+        const toast = document.createElement('div')
+        toast.className = 'toast toast-top toast-center'
+        toast.innerHTML = `<div class="alert alert-warning">${'Update failed: ' + res.error}</div>`
+        document.body.appendChild(toast)
+        setTimeout(() => toast.remove(), 3000)
       }
     } catch (err) {
-      alert('Error: ' + (err instanceof Error ? err.message : String(err)))
+      // alert('Error: ' + (err instanceof Error ? err.message : String(err)))
+      const toast = document.createElement('div')
+      toast.className = 'toast toast-top toast-center'
+      toast.innerHTML = `<div class="alert alert-error">${'Error: ' + (err instanceof Error ? err.message : String(err))}</div>`
+      document.body.appendChild(toast)
+      setTimeout(() => toast.remove(), 3000)
     }
   }
 
@@ -46,23 +66,18 @@ const CustomerUpdateModal = ({ selectedCustomer, onClose, onUpdated }: Props): J
     <>
       <dialog id="modify_customer" className="modal">
         <div className="modal-box">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleSubmit(e)
-            }}
-          >
+          <h3 className="font-bold text-lg text-center">Modify Customer</h3>
+          <form onSubmit={handleSubmit(submitHandler)}>
             {/* if there is a button in form, it will close the modal */}
             <button
               className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
               type="button"
               onClick={() =>
-                (document.getElementById('modify_customer') as HTMLDialogElement)?.close()
+                (document.getElementById('modify_customer') as HTMLDialogElement).close()
               }
             >
               ✕
             </button>
-            <h3 className="font-bold text-lg text-center">Modify Customer</h3>
 
             <div className="mt-5 flex flex-col justify-center items-center">
               <div className="flex flex-col pb-2 w-full max-w-xs">
@@ -73,11 +88,18 @@ const CustomerUpdateModal = ({ selectedCustomer, onClose, onUpdated }: Props): J
                   id="name"
                   type="text"
                   placeholder="Enter name"
-                  onChange={(e) => setName(e.target.value)}
                   className="input input-bordered "
-                  value={name}
-                  required
+                  {...register('name', {
+                    required: 'Name is required',
+                    minLength: { value: 3, message: 'Name must be at least 3 characters' },
+                    maxLength: { value: 40, message: 'Name must be less than 40 characters' }
+                  })}
                 />
+                {errors.name && (
+                  <p role="alert" className="text-error text-sm">
+                    {errors.name.message}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col pb-2  w-full max-w-xs">
                 <label className="font-semibold pb-1" htmlFor="address">
@@ -86,26 +108,40 @@ const CustomerUpdateModal = ({ selectedCustomer, onClose, onUpdated }: Props): J
                 <input
                   type="text"
                   id="address"
-                  placeholder="Enter address"
-                  onChange={(e) => setAddress(e.target.value)}
                   className="input input-bordered"
-                  value={address}
+                  placeholder="Enter address"
+                  {...register('address', {
+                    required: 'Address is required',
+                    minLength: { value: 3, message: 'Address must be at least 3 characters' },
+                    maxLength: { value: 100, message: 'Address must be less than 100 characters' }
+                  })}
                   required
                 />
+                {errors.address && (
+                  <p role="alert" className="text-error text-sm">
+                    {errors.address.message}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col pb-2  w-full max-w-xs">
                 <label className="font-semibold pb-1" htmlFor="contact">
                   Contact
                 </label>
                 <input
-                  type="number"
-                  id="contact"
+                  type="tel"
+                  id="phone"
                   placeholder="Enter phone number"
                   className="input input-bordered"
-                  onChange={(e) => setPhone(e.target.value)}
-                  value={phone}
-                  required
+                  {...register('phone', {
+                    required: 'Phone number is required',
+                    pattern: { value: /^\+?\d{10,15}$/, message: 'Enter a valid phone number' }
+                  })}
                 />
+                {errors.phone && (
+                  <p role="alert" className="text-error text-sm">
+                    {errors.phone.message}
+                  </p>
+                )}
               </div>
               <button type="submit" className="my-4 btn btn-accent w-full max-w-xs">
                 Update

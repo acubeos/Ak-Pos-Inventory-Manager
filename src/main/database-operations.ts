@@ -236,6 +236,66 @@ export class DatabaseOperations {
     }
   }
 
+  async updateCustomer(
+    id: number,
+    updates: Partial<CreateCustomerData>
+  ): Promise<ApiResponse<any>> {
+    try {
+      // Validate the update data first
+      const validationResult = await this.validateCustomerData(updates as CreateCustomerData)
+      if (!validationResult.success) {
+        return validationResult
+      }
+
+      const customer = await dbManager.updateCustomer(id, updates)
+      if (!customer) {
+        return {
+          success: false,
+          error: 'Customer not found',
+          msg: 'Customer not found'
+        }
+      }
+
+      return {
+        success: true,
+        data: customer,
+        updated: customer,
+        msg: 'Customer updated successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to update customer'
+      }
+    }
+  }
+
+  async getCustomerById(id: number): Promise<ApiResponse<any>> {
+    try {
+      const customer = await dbManager.getCustomerById(id)
+      if (!customer) {
+        return {
+          success: false,
+          error: 'Customer not found',
+          msg: 'Customer not found'
+        }
+      }
+
+      return {
+        success: true,
+        data: customer,
+        msg: 'Customer retrieved successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to retrieve customer'
+      }
+    }
+  }
+
   async deleteCustomer(id: number): Promise<ApiResponse<boolean>> {
     try {
       const deleted = await dbManager.deleteCustomer(id)

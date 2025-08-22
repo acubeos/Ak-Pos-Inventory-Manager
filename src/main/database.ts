@@ -429,6 +429,32 @@ export class DatabaseManager {
     return customer
   }
 
+  async getCustomerById(id: number): Promise<any | null> {
+    try {
+      const customer = await this.db?.get(
+        `SELECT
+        id,
+        name,
+        phone,
+        email,
+        address,
+        created_at,
+        last_updated,
+        is_deleted,
+        deleted_at,
+        deleted_by
+      FROM customers
+      WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)`,
+        [id]
+      )
+
+      return customer || null
+    } catch (error) {
+      console.error('Error getting customer by ID:', error)
+      throw error
+    }
+  }
+
   async getCustomers(filters: ApiFilters = {}): Promise<AllCustomers> {
     if (!this.db) throw new Error('Database not initialized')
 

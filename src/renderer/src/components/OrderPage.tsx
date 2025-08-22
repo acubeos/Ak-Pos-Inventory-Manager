@@ -2,6 +2,8 @@ import book from '../assets/image/open-book.png'
 import CustomerModal from './CustomerModal'
 import left from '../assets/icons/icon-left.png'
 import right from '../assets/icons/icon-right.png'
+import React, { useEffect } from 'react'
+import { CreateCustomerData } from 'src/main/api.types'
 
 const OrderPage = (): React.JSX.Element => {
   const products = [
@@ -17,6 +19,30 @@ const OrderPage = (): React.JSX.Element => {
     { id: 2, name: 'Book B', price: 15.0, quantity: 1 },
     { id: 3, name: 'Book C', price: 20.0, quantity: 1 }
   ]
+
+  const [customers, setCustomers] = React.useState<CreateCustomerData[]>([])
+  const [searchTerm, setSearchTerm] = React.useState<string>('')
+
+  useEffect(() => {
+    const fetchCustomers = async (): Promise<void> => {
+      if (!window.electronAPI?.customers.getAll) {
+        console.error('getAllCustomers API not available')
+        return
+      }
+      try {
+        const customerList = await window.electronAPI.customers.getAll()
+        // console.log('Fetched Customers:', customerList)
+        if (customerList && Array.isArray(customerList.data.customers)) {
+          setCustomers(customerList.data.customers) // for APIs that wrap data
+        } else {
+          setCustomers([]) // fallback to empty array
+        }
+      } catch (error) {
+        console.error('Failed to fetch customers:', error)
+      }
+    }
+    fetchCustomers()
+  }, [])
 
   return (
     <div className="bg-slate-100 ml-16 pt-2 pl-4 pr-16 grid grid-cols-2 w-screen gap-x-1 h-screen">
@@ -54,18 +80,39 @@ const OrderPage = (): React.JSX.Element => {
       <div className="min-w-md">
         <h1 className="font-bold">Current Order</h1>
         <div className="py-4">
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form
+            id="form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              window.electronAPI?.customers
+                .search(searchTerm)
+                .then((res) => {
+                  if (res && Array.isArray(res.data.customers)) {
+                    setCustomers(res.data.customers)
+                  } else {
+                    setCustomers([])
+                  }
+                })
+                .catch(console.error)
+            }}
+          >
             <div className="flex gap-x-2">
               <input
                 placeholder="Search Customer"
                 list="select"
                 name="select"
                 className="input input-bordered w-full max-w-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
               <datalist id="select">
-                <option>hhhh</option>
-                <option>bbbb</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.name}>
+                    {customer.name}
+                  </option>
+                ))}
               </datalist>
+
               <button
                 onClick={() => {
                   const modal = document.getElementById('add_customer') as HTMLDialogElement | null
@@ -137,11 +184,28 @@ const OrderPage = (): React.JSX.Element => {
             </div>
 
             <div className="flex flex-col pt-4 gap-y-2">
-              <button className="btn btn-accent w-3/6">Complete Order</button>
-              <button className="btn btn-accent btn-outline w-3/6">Clear Order</button>
+              <button type="submit" className="btn btn-accent w-3/6">
+                Complete Order
+              </button>
+              <button
+                type="reset"
+                onClick={() => {
+                  const form = document.getElementById('form') as HTMLFormElement
+                  form.reset()
+                  setSearchTerm('')
+                }}
+                className="btn btn-accent btn-outline w-3/6"
+              >
+                Clear Order
+              </button>
             </div>
           </form>
-          <CustomerModal />
+          <CustomerModal
+            onClose={() => {
+              const modal = document.getElementById('add_customer') as HTMLDialogElement
+              modal.close()
+            }}
+          />
         </div>
       </div>
     </div>

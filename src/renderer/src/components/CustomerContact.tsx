@@ -145,8 +145,23 @@ const CustomerContact = (): JSX.Element => {
           </tbody>
         </table>
       </div>
-      <CustomerModal />
-      <CustomerUpdateModal selectedCustomer={selectedCustomer} />
+      <CustomerModal
+        onClose={() => {
+          const modal = document.getElementById('add_customer') as HTMLDialogElement
+          modal.close()
+        }}
+      />
+      <CustomerUpdateModal
+        selectedCustomer={selectedCustomer}
+        onClose={() => {
+          const modal = document.getElementById('modify_customer') as HTMLDialogElement
+          modal.close()
+          setSelectedCustomer(null)
+        }}
+        onUpdated={(updated) => {
+          setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+        }}
+      />
       <div className="flex flex-row mt-2 ml-2 gap-x-2 align-center items-center">
         <button
           className="btn btn-xs btn-ghost btn-square"

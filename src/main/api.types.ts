@@ -134,16 +134,6 @@ export interface CreateCustomerData {
   phone: string
   address: string
 }
-
-export interface SingleProductSale {
-  product_id: string
-  uuid?: string
-  name: string
-  quantity: number
-  price?: number
-  total?: number
-}
-
 export interface ApiFilters {
   featured?: boolean
   company?: string
