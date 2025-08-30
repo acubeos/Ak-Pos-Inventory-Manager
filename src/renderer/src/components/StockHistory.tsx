@@ -1,82 +1,116 @@
+import { useState, JSX, useEffect } from 'react'
 import { formatDate } from '@renderer/helpers/general'
 import left from '../assets/icons/icon-left.png'
 import right from '../assets/icons/icon-right.png'
-import { JSX } from 'react'
+import { SingleStock } from 'src/main/api.types'
 
 const StockHistory = (): JSX.Element => {
-  const stocks = [
-    {
-      id: 1,
-      name: 'Product A',
-      type: 'Added',
-      quantity: 100,
-      created_at: '2023-10-01T12:00:00Z'
-    },
-    {
-      id: 2,
-      name: 'Product B',
-      type: 'Removed',
-      quantity: 50,
-      created_at: '2023-10-02T12:00:00Z'
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [stocks, setStocks] = useState<SingleStock[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+
+  const fetchStocks = async (): Promise<void> => {
+    try {
+      setLoading(true)
+      const result = await window.electronAPI?.stock.getAll({ page, limit })
+      setStocks(result?.stock || [])
+      setTotal(result?.total || 0)
+    } catch (error) {
+      console.error('Error fetching stock history:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  useEffect(() => {
+    fetchStocks()
+  }, [page, limit])
 
   return (
-    <div className=" ml-16 h-screen w-screen">
+    <div className="ml-16 h-screen w-screen">
       <div className="pb-4 pt-1 pl-2">
         <h1 className="text-2xl font-semibold">Stock History</h1>
       </div>
-      <hr></hr>
+      <hr />
       <div className="max-h-screen">
         <table className="table table-zebra">
-          {/* head */}
           <thead className="bg-accent">
             <tr>
               <th>Product</th>
               <th>Transaction Type</th>
               <th>Quantity</th>
-              <th>Transaction Date</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>
-            {/* row 1 */}
-            {stocks.map((stock) => (
-              <tr key={stock.id}>
-                <td>{stock.name}</td>
-                <td>{stock.type}</td>
-                <td>{stock.quantity}</td>
-                <td>{formatDate(stock.created_at, true)}</td>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="text-center py-4">
+                  Loading...
+                </td>
               </tr>
-            ))}
+            ) : stocks.length > 0 ? (
+              stocks.map((stock) => (
+                <tr key={stock.id}>
+                  <td>{stock.Product?.name}</td>
+                  <td>{stock.type}</td>
+                  <td>{stock.quantity}</td>
+                  <td>{formatDate(stock.created_at, true)}</td>
+                  <td>{stock.User?.username || 'System'}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="text-center py-4">
+                  No history found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      <div className="flex flex-row mt-2 ml-2 gap-x-2 align-center items-center">
-        <button className="btn btn-xs btn-ghost btn-square">
+
+      {/* Pagination */}
+      <div className="flex flex-row mt-2 ml-2 gap-x-2 items-center">
+        <button
+          className="btn btn-xs btn-ghost btn-square"
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+        >
           <img src={left} alt="Previous" />
         </button>
+
+        <span className="ml-2 mr-2 text-sm">
+          Page {page} of {total || 1}
+        </span>
+
+        <button
+          className="btn btn-xs btn-ghost btn-square"
+          onClick={() => setPage((p) => (p < total ? p + 1 : p))}
+          disabled={page >= total}
+        >
+          <img src={right} alt="Next" />
+        </button>
+
         <div className="flex flex-row gap-x-2 items-center ml-4">
-          <label htmlFor="page" className="block text-sm font-medium">
-            Page:
-          </label>
-        </div>
-        <div className="flex flex-row gap-x-2 items-center">
           <label htmlFor="limit" className="block text-sm font-medium">
             Limit:
           </label>
           <select
             id="limit"
-            name="limit"
             className="select select-xs select-bordered w-full max-w-xs"
-            // value={filters.limit}
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value))
+              setPage(1)
+            }}
           >
-            <option value="10">10</option>
-            <option value="15">15</option>
+            <option value={10}>10</option>
+            <option value={15}>15</option>
           </select>
         </div>
-        <button className="btn btn-xs btn-ghost btn-square">
-          <img src={right} alt="Next" />
-        </button>
       </div>
     </div>
   )

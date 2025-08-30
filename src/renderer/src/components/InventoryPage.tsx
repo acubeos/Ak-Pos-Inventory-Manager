@@ -1,130 +1,150 @@
+import { useEffect, useState } from 'react'
 import { formatDate } from '@renderer/helpers/general'
 import { Link } from 'react-router-dom'
 import deleteIcon from '../assets/icons/deleteIcon.png'
-import left from '../assets/icons/icon-left.png'
-import right from '../assets/icons/icon-right.png'
 import ProductModal from './ProductModal'
 import ProductUpdateModal from './ProductUpdateModal'
+import { SingleProduct } from '../../../main/api.types'
+import ConfirmDialog from './ConfirmDialog'
 
 const Inventory = (): React.JSX.Element => {
-  const products = [
-    {
-      uuid: '1',
-      name: 'Product A',
-      price: 1000,
-      available: 50,
-      last_updated: new Date(),
-      amountSold: 5000,
-      purchased: 30
-    },
-    {
-      uuid: '2',
-      name: 'Product B',
-      price: 2000,
-      available: 20,
-      last_updated: new Date(),
-      amountSold: 4000,
-      purchased: 10
+  const [products, setProducts] = useState<SingleProduct[]>([])
+  const [loading, setLoading] = useState(false)
+  const [deleteProductId, setDeleteProductId] = useState<number | null>(null)
+
+  const fetchProducts = async (): Promise<void> => {
+    try {
+      setLoading(true)
+      const res = await window.electronAPI?.products.getAll()
+
+      if (res?.success) {
+        setProducts(res.data.product || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch products:', err)
+    } finally {
+      setLoading(false)
     }
-    // Add more products as needed
-  ]
+  }
+
+  const handleDelete = async (): Promise<void> => {
+    if (deleteProductId === null) return
+    try {
+      const res = await window.electronAPI?.products.delete(deleteProductId)
+      if (res?.success) {
+        setProducts((prev) => prev.filter((p) => p.id !== deleteProductId))
+      } else {
+        alert(res?.msg || 'Delete failed')
+      }
+    } catch (err) {
+      console.error('Delete failed:', err)
+    } finally {
+      setDeleteProductId(null)
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
   return (
     <div className="bg-slate-100 ml-16 h-screen w-screen pr-16">
       <div className="pb-4 pt-1 pl-2">
         <h1 className="text-2xl font-semibold">Inventory</h1>
-        <p className="text-xs text-gray-400">6 Product(s)</p>
+        <p className="text-xs text-gray-400">{products.length} Product(s)</p>
       </div>
-      <hr></hr>
+      <hr />
 
-      <form onSubmit={(e) => e.preventDefault()}>
-        <div className="flex flex-row justify-between pl-2">
-          <div>
-            <button
-              className="btn btn-accent btn-sm my-4"
-              onClick={() => {
-                const modal = document.getElementById('add_product') as HTMLDialogElement
-                modal.showModal()
-              }}
-            >
-              Add Product
-            </button>
-            <Link className="btn btn-outline btn-accent btn-sm my-4 ml-4" to="/stockHistory">
-              Stock History
-            </Link>
-          </div>
+      <div className="flex flex-row justify-between pl-2">
+        <div>
           <button
-            className="btn btn-outline btn-error btn-sm my-4 mr-4"
-            onClick={() => {
-              const modal = document.getElementById('modify_product') as HTMLDialogElement
-              modal.showModal()
-            }}
+            type="button"
+            className="btn btn-accent btn-sm my-4"
+            onClick={() =>
+              (document.getElementById('add_product') as HTMLDialogElement)?.showModal()
+            }
           >
-            Update Product
+            Add Product
           </button>
+          <Link className="btn btn-outline btn-accent btn-sm my-4 ml-4" to="/stockHistory">
+            Stock History
+          </Link>
         </div>
-        <ProductModal />
-        <ProductUpdateModal />
-        <div className="overflow-x-auto max-h-[420px]">
-          <table className="table table-xs table-pin-rows">
-            {/* head */}
-            <thead className="bg-accent">
+        <button
+          type="button"
+          className="btn btn-outline btn-error btn-sm my-4 mr-4"
+          onClick={() =>
+            (document.getElementById('modify_product') as HTMLDialogElement)?.showModal()
+          }
+        >
+          Update Product
+        </button>
+      </div>
+
+      {/* Modals */}
+      <ProductModal onProductCreated={fetchProducts} />
+      <ProductUpdateModal products={products} onProductUpdated={fetchProducts} />
+
+      <div className="overflow-x-auto max-h-[420px]">
+        <table className="table table-xs table-pin-rows">
+          <thead className="bg-accent">
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Available</th>
+              <th>Modified</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th>Product</th>
-                <th>Price</th>
-                <th>Available</th>
-                <th>Modified</th>
-                <th>Total Sale</th>
-                <th>Total Products Sold</th>
-                <th>Action</th>
+                <td colSpan={6} className="text-center py-4">
+                  Loading...
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {/* row 1 */}
-              {products.map((product) => (
-                <tr key={product.uuid}>
-                  <th>{product.name}</th>
-                  <td># {product.price.toLocaleString()}</td>
-                  <td>{product.available}</td>
-                  <td>{formatDate(product.last_updated.toISOString())}</td>
-                  <td>{product.amountSold}</td>
-                  <td>{product.purchased}</td>
+            ) : products.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-4">
+                  No products found
+                </td>
+              </tr>
+            ) : (
+              products.map((p) => (
+                <tr key={p.uuid}>
+                  <td>{p.name}</td>
+                  <td># {p.price.toLocaleString()}</td>
+                  <td>{p.quantity}</td>
+                  <td>{formatDate(p.last_updated)}</td>
+                  <td>{p.status === 1 ? 'Active' : 'Inactive'}</td>
                   <td>
-                    <button className="btn btn-xs btn-square btn-error">
-                      <img src={deleteIcon} alt="icon" className="mx-auto w-1/2" />
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-square btn-error"
+                      onClick={() => {
+                        setDeleteProductId(p.id)
+                        ;(
+                          document.getElementById('confirm_delete') as HTMLDialogElement
+                        )?.showModal()
+                      }}
+                    >
+                      <img src={deleteIcon} alt="delete" className="mx-auto w-1/2" />
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </form>
-      <div className="flex flex-row mt-2 ml-2 gap-x-2 align-center items-center">
-        <button className="btn btn-xs btn-ghost btn-square">
-          <img src={left} alt="Previous" />
-        </button>
-        <div className="flex flex-row gap-x-2 items-center ml-4">
-          <label htmlFor="page" className="block text-sm font-medium">
-            Page:
-          </label>
-        </div>
-        <div className="flex flex-row gap-x-2 items-center">
-          <label htmlFor="limit" className="block text-sm font-medium">
-            Limit:
-          </label>
-          <select
-            id="limit"
-            name="limit"
-            className="select select-xs select-bordered w-full max-w-xs"
-          >
-            <option value="8">8</option>
-            <option value="15">15</option>
-          </select>
-        </div>
-        <button className="btn btn-xs btn-ghost btn-square">
-          <img src={right} alt="Next" />
-        </button>
+              ))
+            )}
+          </tbody>
+        </table>
+        <ConfirmDialog
+          id="confirm_delete"
+          title="Delete Product"
+          message="Are you sure you want to delete this product?"
+          confirmText="Yes, Delete"
+          cancelText="Cancel"
+          onConfirm={handleDelete}
+        />
       </div>
     </div>
   )

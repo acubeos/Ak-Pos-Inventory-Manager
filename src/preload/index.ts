@@ -2,8 +2,6 @@ console.log('--- The Preload Script is Running! ---')
 import { contextBridge, ipcRenderer } from 'electron'
 import {
   CreateProductData,
-  LoginData,
-  RegisterData,
   CreateSaleData,
   CreateCustomerData,
   ApiFilters
@@ -11,13 +9,6 @@ import {
 
 // Expose all custom IPC handlers under 'api'
 const api = {
-  // Authentication APIs
-  auth: {
-    login: (loginData: LoginData): Promise<any> => ipcRenderer.invoke('auth:login', loginData),
-    register: (registerData: RegisterData): Promise<any> =>
-      ipcRenderer.invoke('auth:register', registerData)
-  },
-
   // Product APIs
   products: {
     create: (productData: CreateProductData): Promise<any> =>
@@ -38,14 +29,10 @@ const api = {
   // Stock APIs
   stock: {
     getAll: (filters?: ApiFilters): Promise<any> => ipcRenderer.invoke('stock:getAll', filters),
-    add: (productId: number, quantity: number, userId: number, type?: string): Promise<any> =>
-      ipcRenderer.invoke('stock:add', productId, quantity, userId, type),
-    adjust: (
-      productId: number,
-      newQuantity: number,
-      userId: number,
-      reason?: string
-    ): Promise<any> => ipcRenderer.invoke('stock:adjust', productId, newQuantity, userId, reason)
+    add: (productId: number, quantity: number, type?: string): Promise<any> =>
+      ipcRenderer.invoke('stock:add', productId, quantity, type),
+    adjust: (productId: number, newQuantity: number, reason?: string): Promise<any> =>
+      ipcRenderer.invoke('stock:adjust', productId, newQuantity, reason)
   },
 
   // Customer APIs
@@ -62,8 +49,8 @@ const api = {
 
   // Sales APIs
   sales: {
-    create: (saleData: CreateSaleData, userId: number): Promise<any> =>
-      ipcRenderer.invoke('sales:create', saleData, userId),
+    create: (saleData: CreateSaleData): Promise<any> =>
+      ipcRenderer.invoke('sales:create', saleData),
     getAll: (filters?: ApiFilters): Promise<any> => ipcRenderer.invoke('sales:getAll', filters)
   },
 

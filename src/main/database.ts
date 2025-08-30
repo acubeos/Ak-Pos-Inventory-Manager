@@ -8,9 +8,6 @@ import {
   SingleStock,
   AllStock,
   CreateProductData,
-  AuthResponse,
-  LoginData,
-  RegisterData,
   Sale,
   AllSales,
   Customer,
@@ -39,20 +36,6 @@ export class DatabaseManager {
 
     // Enable foreign keys
     await this.db.exec('PRAGMA foreign_keys = ON')
-
-    // Users table
-    await this.db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT UNIQUE NOT NULL,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        name TEXT NOT NULL,
-        role TEXT DEFAULT 'user',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
 
     // Products table
     await this.db.exec(`
@@ -95,13 +78,11 @@ export class DatabaseManager {
         outstanding_amount REAL DEFAULT 0,
         total_amount REAL NOT NULL,
         total_paid REAL NOT NULL,
-        user_id INTEGER NOT NULL,
         products TEXT NOT NULL, -- JSON string
         status BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (customer_id) REFERENCES customers(id),
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
       )
     `)
 
@@ -112,13 +93,11 @@ export class DatabaseManager {
         product_id INTEGER NOT NULL,
         quantity INTEGER NOT NULL,
         type TEXT NOT NULL,
-        user_id INTEGER NOT NULL,
         sales_id INTEGER,
         status INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id),
-        FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (sales_id) REFERENCES sales(id)
       )
     `)
@@ -131,8 +110,6 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_customers_uuid ON customers(uuid);
       CREATE INDEX IF NOT EXISTS idx_stock_product_id ON stock(product_id);
       CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON sales(customer_id);
-      CREATE INDEX IF NOT EXISTS idx_users_uuid ON users(uuid);
-      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     `)
   }
 
@@ -149,47 +126,6 @@ export class DatabaseManager {
       await this.db.exec('ROLLBACK')
       throw error
     }
-  }
-
-  // User operations
-  async createUser(userData: RegisterData): Promise<AuthResponse> {
-    if (!this.db) throw new Error('Database not initialized')
-
-    const uuid = this.generateUUID()
-
-    await this.db.run('INSERT INTO users (uuid, username, password, name) VALUES (?, ?, ?, ?)', [
-      uuid,
-      userData.username,
-      userData.password,
-      userData.name
-    ])
-
-    return {
-      username: userData.username,
-      uuid,
-      role: 'user'
-    }
-  }
-
-  async getUserByUsername(username: string): Promise<AuthResponse | null> {
-    if (!this.db) throw new Error('Database not initialized')
-
-    const user = await this.db.get('SELECT uuid, username, role FROM users WHERE username = ?', [
-      username
-    ])
-
-    return user || null
-  }
-
-  async validateUser(loginData: LoginData): Promise<AuthResponse | null> {
-    if (!this.db) throw new Error('Database not initialized')
-
-    const user = await this.db.get(
-      'SELECT uuid, username, role FROM users WHERE username = ? AND password = ?',
-      [loginData.username, loginData.password]
-    )
-
-    return user || null
   }
 
   // Product operations
@@ -305,10 +241,9 @@ export class DatabaseManager {
 
     const stocks = await this.db.all(
       `
-      SELECT s.*, p.*, u.username, u.uuid as user_uuid, u.role
+      SELECT s.*, p.*
       FROM stock s
       LEFT JOIN products p ON s.product_id = p.id
-      LEFT JOIN users u ON s.user_id = u.id
       WHERE s.product_id = ?
     `,
       [productId]
@@ -319,7 +254,6 @@ export class DatabaseManager {
       product_id: stock.product_id,
       quantity: stock.quantity,
       type: stock.type,
-      user_id: stock.user_id,
       sales_id: stock.sales_id,
       status: stock.status,
       created_at: stock.created_at,
@@ -337,14 +271,7 @@ export class DatabaseManager {
         last_updated: stock.last_updated,
         created_at: stock.created_at,
         stock: null
-      },
-      User: stock.username
-        ? {
-            username: stock.username,
-            uuid: stock.user_uuid,
-            role: stock.role
-          }
-        : undefined
+      }
     }))
   }
 
@@ -352,10 +279,9 @@ export class DatabaseManager {
     if (!this.db) throw new Error('Database not initialized')
 
     let query = `
-      SELECT s.*, p.*, u.username, u.uuid as user_uuid, u.role
+      SELECT s.*, p.*
       FROM stock s
       LEFT JOIN products p ON s.product_id = p.id
-      LEFT JOIN users u ON s.user_id = u.id
       WHERE 1=1
     `
     const params: any[] = []
@@ -378,7 +304,6 @@ export class DatabaseManager {
       product_id: stock.product_id,
       quantity: stock.quantity,
       type: stock.type,
-      user_id: stock.user_id,
       sales_id: stock.sales_id,
       status: stock.status,
       created_at: stock.created_at,
@@ -396,14 +321,7 @@ export class DatabaseManager {
         last_updated: stock.last_updated,
         created_at: stock.created_at,
         stock: null
-      },
-      User: stock.username
-        ? {
-            username: stock.username,
-            uuid: stock.user_uuid,
-            role: stock.role
-          }
-        : undefined
+      }
     }))
 
     return {
@@ -436,15 +354,11 @@ export class DatabaseManager {
         id,
         name,
         phone,
-        email,
         address,
         created_at,
-        last_updated,
-        is_deleted,
-        deleted_at,
-        deleted_by
+        updated_at
       FROM customers
-      WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)`,
+      WHERE id = ?`,
         [id]
       )
 
@@ -513,7 +427,7 @@ export class DatabaseManager {
   }
 
   // Sales operations
-  async createSale(saleData: CreateSaleData, userId: number): Promise<Sale> {
+  async createSale(saleData: CreateSaleData): Promise<Sale> {
     if (!this.db) throw new Error('Database not initialized')
 
     return this.transaction(async (db) => {
@@ -524,8 +438,8 @@ export class DatabaseManager {
         `
         INSERT INTO sales (
           customer_id, customer_name, total, outstanding, outstanding_amount,
-          total_amount, total_paid, user_id, products, created_at, last_updated
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          total_amount, total_paid, products, created_at, last_updated
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
         [
           saleData.customer_id,
@@ -535,7 +449,6 @@ export class DatabaseManager {
           saleData.outstanding,
           saleData.total_paid + saleData.outstanding,
           saleData.total_paid,
-          userId,
           JSON.stringify(saleData.products),
           now,
           now
@@ -554,14 +467,13 @@ export class DatabaseManager {
         await db.run(
           `
           INSERT INTO stock (
-            product_id, quantity, type, user_id, sales_id, created_at, last_updated
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            product_id, quantity, type, sales_id, created_at, last_updated
+          ) VALUES (?, ?, ?, ?, ?, ?)
         `,
           [
             product.product_id,
             -product.quantity, // Negative for sale
             'sale',
-            userId,
             result.lastID,
             now,
             now
@@ -626,7 +538,6 @@ export class DatabaseManager {
       outstanding_amount: sale.outstanding_amount,
       total_amount: sale.total_amount,
       total_paid: sale.total_paid,
-      user_id: sale.user_id,
       products: JSON.parse(sale.products),
       status: sale.status,
       created_at: sale.created_at,

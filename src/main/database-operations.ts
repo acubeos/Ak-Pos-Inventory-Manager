@@ -5,9 +5,6 @@ import {
   Product,
   AllStock,
   CreateProductData,
-  AuthResponse,
-  LoginData,
-  RegisterData,
   AllSales,
   AllCustomers,
   CreateSaleData,
@@ -16,59 +13,6 @@ import {
 } from './api.types'
 
 export class DatabaseOperations {
-  // Authentication operations
-  async register(userData: RegisterData): Promise<ApiResponse<AuthResponse>> {
-    try {
-      const existingUser = await dbManager.getUserByUsername(userData.username)
-      if (existingUser) {
-        return {
-          success: false,
-          error: 'Username already exists',
-          msg: 'Username already exists'
-        }
-      }
-
-      const user = await dbManager.createUser(userData)
-      return {
-        success: true,
-        data: user,
-        msg: 'User created successfully'
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        msg: 'Failed to create user'
-      }
-    }
-  }
-
-  async login(loginData: LoginData): Promise<ApiResponse<AuthResponse>> {
-    try {
-      const user = await dbManager.validateUser(loginData)
-      if (!user) {
-        return {
-          success: false,
-          error: 'Invalid credentials',
-          msg: 'Invalid username or password'
-        }
-      }
-
-      return {
-        success: true,
-        data: user,
-        msg: 'Login successful',
-        accessToken: this.generateToken(user.uuid)
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        msg: 'Login failed'
-      }
-    }
-  }
-
   // Product operations
   async createProduct(productData: CreateProductData): Promise<ApiResponse<SingleProduct>> {
     try {
@@ -322,7 +266,7 @@ export class DatabaseOperations {
   }
 
   // Sales operations
-  async createSale(saleData: CreateSaleData, userId: number): Promise<ApiResponse<any>> {
+  async createSale(saleData: CreateSaleData): Promise<ApiResponse<any>> {
     try {
       // Validate stock availability
       const stockValidation = await this.validateStockAvailability(saleData.products)
@@ -330,7 +274,7 @@ export class DatabaseOperations {
         return stockValidation
       }
 
-      const sale = await dbManager.createSale(saleData, userId)
+      const sale = await dbManager.createSale(saleData)
       return {
         success: true,
         data: sale,
@@ -396,11 +340,6 @@ export class DatabaseOperations {
         msg: 'Stock validation failed'
       }
     }
-  }
-
-  private generateToken(uuid: string): string {
-    // Simple token generation - you might want to use JWT or similar
-    return Buffer.from(`${uuid}:${Date.now()}`).toString('base64')
   }
 
   // Reporting operations
@@ -674,7 +613,6 @@ export class DatabaseOperations {
   async addStock(
     productId: number,
     quantity: number,
-    userId: number,
     type: string = 'restock'
   ): Promise<ApiResponse<any>> {
     try {
@@ -684,10 +622,10 @@ export class DatabaseOperations {
         // Add stock entry
         await db.run(
           `
-          INSERT INTO stock (product_id, quantity, type, user_id, created_at, last_updated)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO stock (product_id, quantity, type, created_at, last_updated)
+          VALUES (?, ?, ?, ?, ?)
         `,
-          [productId, quantity, type, userId, now, now]
+          [productId, quantity, type, now, now]
         )
 
         // Update product quantity
@@ -714,7 +652,6 @@ export class DatabaseOperations {
   async adjustStock(
     productId: number,
     newQuantity: number,
-    userId: number,
     reason: string = 'adjustment'
   ): Promise<ApiResponse<any>> {
     try {
@@ -732,10 +669,10 @@ export class DatabaseOperations {
         // Add stock entry for the adjustment
         await db.run(
           `
-          INSERT INTO stock (product_id, quantity, type, user_id, created_at, last_updated)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO stock (product_id, quantity, type, created_at, last_updated)
+          VALUES (?, ?, ?, ?, ?)
         `,
-          [productId, adjustment, reason, userId, now, now]
+          [productId, adjustment, reason, now, now]
         )
 
         // Update product quantity

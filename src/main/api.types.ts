@@ -5,8 +5,14 @@ export interface ApiResponse<T> {
   msg?: string
   err?: boolean | string
   error?: boolean | string
-  accessToken?: string
   updated?: T
+}
+
+export interface CreateProductData {
+  name: string
+  price: number
+  quantity: number
+  type: string
 }
 
 export interface SingleProduct {
@@ -34,48 +40,12 @@ export interface SingleStock {
   last_updated: string
   product_id: number
   quantity: number
-  sales_id: null | number
   status: number | boolean
   type: string
-  user_id: number
-  User?: AuthResponse
 }
 export interface AllStock {
   stock: SingleStock[]
   total: number
-}
-// export interface ApiFilters {
-//   featured?: boolean
-//   company?: string
-//   name?: string
-//   sort?: string
-//   fields?: string
-//   numericFilters?: string
-//   page?: number
-//   limit?: number
-// }
-
-// Request Types
-export interface CreateProductData {
-  name: string
-  price: number
-  quantity: number
-  type: string
-}
-
-export interface AuthResponse {
-  username: string
-  uuid: string
-  role: string
-}
-
-export interface LoginData {
-  username: string
-  password: string
-}
-
-export interface RegisterData extends LoginData {
-  name: string
 }
 
 export interface Sale {
@@ -84,7 +54,6 @@ export interface Sale {
   customer_name: string
   total: number
   outstanding: number
-  user_id: number
   products: any
   Customer: any
   status: boolean

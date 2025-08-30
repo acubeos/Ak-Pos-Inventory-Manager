@@ -1,8 +1,4 @@
 interface ElectronAPI {
-  auth: {
-    login: (loginData: LoginData) => Promise<any>
-    register: (registerData: RegisterData) => Promise<any>
-  }
   products: {
     create: (productData: CreateProductData) => Promise<any>
     getAll: (filters?: ApiFilters) => Promise<any>
@@ -15,13 +11,8 @@ interface ElectronAPI {
   }
   stock: {
     getAll: (filters?: ApiFilters) => Promise<any>
-    add: (productId: number, quantity: number, userId: number, type?: string) => Promise<any>
-    adjust: (
-      productId: number,
-      newQuantity: number,
-      userId: number,
-      reason?: string
-    ) => Promise<any>
+    add: (productId: number, quantity: number, type?: string) => Promise<any>
+    adjust: (productId: number, newQuantity: number, reason?: string) => Promise<any>
   }
   customers: {
     create: (customerData: CreateCustomerData) => Promise<any>
@@ -31,7 +22,7 @@ interface ElectronAPI {
     update: (id: number, updates: Partial<CreateCustomerData>) => Promise<any>
   }
   sales: {
-    create: (saleData: CreateSaleData, userId: number) => Promise<any>
+    create: (saleData: CreateSaleData) => Promise<any>
     getAll: (filters?: ApiFilters) => Promise<any>
   }
   reports: {
