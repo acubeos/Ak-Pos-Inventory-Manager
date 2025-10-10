@@ -1,3 +1,4 @@
+import '../index.css'
 import { Route, Routes } from 'react-router-dom'
 import Layout from './Layout'
 import Dashboard from './components/Dashboard'
@@ -11,8 +12,6 @@ import CustomerContact from './components/CustomerContact'
 import InventoryPage from './components/InventoryPage'
 
 function App(): React.JSX.Element {
-  // const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-
   return (
     <>
       <Routes>

@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast'
 function NotificationBar(): React.JSX.Element {
   return (
     <Toaster
-      position="top-right"
+      position="top-center"
       toastOptions={{
         duration: 5000,
         style: {

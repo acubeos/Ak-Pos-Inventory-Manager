@@ -4,7 +4,10 @@ import {
   CreateProductData,
   CreateSaleData,
   CreateCustomerData,
-  ApiFilters
+  ApiFilters,
+  PaymentProcessData,
+  CustomerCreditUpdate,
+  OutstandingFilters
 } from '../main/api.types'
 
 // Expose all custom IPC handlers under 'api'
@@ -35,7 +38,52 @@ const api = {
       ipcRenderer.invoke('stock:adjust', productId, newQuantity, reason)
   },
 
-  // Customer APIs
+  // Sales APIs
+  sales: {
+    create: (saleData: CreateSaleData): Promise<any> =>
+      ipcRenderer.invoke('sales:create', saleData),
+    getAll: (filters?: ApiFilters): Promise<any> => ipcRenderer.invoke('sales:getAll', filters)
+  },
+
+  // Payment APIs
+  payments: {
+    /**
+     * Process a payment for a customer
+     * @param paymentData Payment details including customer ID, amount, method, etc.
+     */
+    process: (paymentData: PaymentProcessData) =>
+      ipcRenderer.invoke('payments:process', paymentData),
+
+    /**
+     * Get outstanding payments with optional filtering
+     * @param filters Optional filters for aging, search terms, etc.
+     */
+    getOutstanding: (filters?: OutstandingFilters) =>
+      ipcRenderer.invoke('payments:getOutstanding', filters),
+
+    /**
+     * Get detailed payment information for a specific customer
+     * @param customerId Customer ID
+     */
+    getCustomerDetails: (customerId: number) =>
+      ipcRenderer.invoke('payments:getCustomerDetails', customerId),
+
+    /**
+     * Get payment history
+     * @param customerId Optional customer ID to filter by
+     * @param limit Maximum number of records to return
+     */
+    getHistory: (customerId?: number, limit?: number) =>
+      ipcRenderer.invoke('payments:getHistory', customerId, limit),
+
+    /**
+     * Generate outstanding payments report
+     * @param filters Optional filters for the report
+     */
+    getReport: (filters?: OutstandingFilters) => ipcRenderer.invoke('payments:getReport', filters)
+  },
+
+  // Extend existing customers API with credit management
   customers: {
     create: (customerData: CreateCustomerData): Promise<any> =>
       ipcRenderer.invoke('customers:create', customerData),
@@ -44,14 +92,14 @@ const api = {
       ipcRenderer.invoke('customers:search', searchTerm, filters),
     delete: (id: number): Promise<any> => ipcRenderer.invoke('customers:delete', id),
     update: (id: number, updates: Partial<CreateCustomerData>): Promise<any> =>
-      ipcRenderer.invoke('customers:update', { id, updates })
-  },
+      ipcRenderer.invoke('customers:update', { id, updates }),
 
-  // Sales APIs
-  sales: {
-    create: (saleData: CreateSaleData): Promise<any> =>
-      ipcRenderer.invoke('sales:create', saleData),
-    getAll: (filters?: ApiFilters): Promise<any> => ipcRenderer.invoke('sales:getAll', filters)
+    /**
+     * Update customer credit settings
+     * @param creditData Credit limit, terms, and enabled status
+     */
+    updateCredit: (creditData: CustomerCreditUpdate) =>
+      ipcRenderer.invoke('customers:updateCredit', creditData)
   },
 
   // Reports APIs
@@ -73,7 +121,8 @@ const api = {
     showError: (title: string, message: string): Promise<any> =>
       ipcRenderer.invoke('app:showError', title, message),
     showMessage: (title: string, message: string): Promise<any> =>
-      ipcRenderer.invoke('app:showMessage', title, message)
+      ipcRenderer.invoke('app:showMessage', title, message),
+    savePdf: (): Promise<any> => ipcRenderer.invoke('app:save-pdf')
   }
 }
 

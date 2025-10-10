@@ -1,4 +1,3 @@
-import deleteIcon from '../assets/icons/deleteIcon.png'
 import editIcon from '../assets/icons/editIcon.png'
 import left from '../assets/icons/icon-left.png'
 import right from '../assets/icons/icon-right.png'
@@ -37,7 +36,7 @@ const CustomerContact = (): JSX.Element => {
       }
     }
     fetchCustomers()
-  }, [page, limit])
+  }, [customers, page, limit])
 
   return (
     <div className="bg-slate-100 ml-16 h-screen w-screen pr-16">
@@ -46,6 +45,41 @@ const CustomerContact = (): JSX.Element => {
         <p className="text-xs text-gray-400">{total} Customer(s)</p>
       </div>
       <hr></hr>
+      <div className="flex flex-row mt-2 ml-2 gap-x-2 align-center items-center">
+        <button
+          className="btn btn-xs btn-ghost btn-square"
+          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+        >
+          <img src={left} alt="Previous" />
+        </button>
+        <div className="flex flex-row gap-x-2 items-center ml-4">
+          <label className="block text-sm font-medium">
+            Page {page} of {Math.ceil(total / limit)}
+          </label>
+        </div>
+        <div className="flex flex-row gap-x-2 items-center">
+          <label htmlFor="limit" className="block text-sm font-medium">
+            Limit:
+          </label>
+          <select
+            id="limit"
+            name="limit"
+            className="select select-xs select-bordered w-full  max-w-xs"
+            value={limit}
+            onChange={(e) => setLimit(Number(e.target.value))}
+          >
+            <option value="11">11</option>
+            <option value="15">15</option>
+          </select>
+        </div>
+        <button
+          className="btn btn-xs btn-ghost btn-square"
+          disabled={page >= Math.ceil(total / limit)}
+          onClick={() => setPage((prev) => prev + 1)}
+        >
+          <img src={right} alt="next" />
+        </button>
+      </div>
 
       <form
         onSubmit={(e) => {
@@ -63,6 +97,7 @@ const CustomerContact = (): JSX.Element => {
         }}
       >
         <button
+          type="button"
           className="btn btn-accent btn-sm my-4 ml-2"
           onClick={() => {
             const modal = document.getElementById('add_customer') as HTMLDialogElement
@@ -80,7 +115,16 @@ const CustomerContact = (): JSX.Element => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <button type="submit" className="mx-4 btn btn-sm btn-accent btn-outline">
-          Filter
+          Search
+        </button>
+        <button
+          type="submit"
+          onClick={() => {
+            setSearchTerm('')
+          }}
+          className="btn btn-sm btn-error btn-outline"
+        >
+          Refresh
         </button>
       </form>
       <div className="overflow-x-auto max-h-[420px]">
@@ -119,25 +163,6 @@ const CustomerContact = (): JSX.Element => {
                     >
                       <img src={editIcon} alt="icon" className="mx-auto w-1/2" />
                     </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Delete ${customer.name}?`)) {
-                          window.electronAPI?.customers
-                            .delete(customer.id!)
-                            .then((res) => {
-                              if (res.success) {
-                                setCustomers((prev) => prev.filter((c) => c.id !== customer.id))
-                              } else {
-                                alert('Failed to delete customer: ' + res.error)
-                              }
-                            })
-                            .catch((err) => alert('Error: ' + err.message))
-                        }
-                      }}
-                      className="btn btn-xs btn-square btn-error"
-                    >
-                      <img src={deleteIcon} alt="icon" className="mx-auto w-1/2" />
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -162,41 +187,6 @@ const CustomerContact = (): JSX.Element => {
           setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
         }}
       />
-      <div className="flex flex-row mt-2 ml-2 gap-x-2 align-center items-center">
-        <button
-          className="btn btn-xs btn-ghost btn-square"
-          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-        >
-          <img src={left} alt="Previous" />
-        </button>
-        <div className="flex flex-row gap-x-2 items-center ml-4">
-          <label className="block text-sm font-medium">
-            Page {page} of {Math.ceil(total / limit)}
-          </label>
-        </div>
-        <div className="flex flex-row gap-x-2 items-center">
-          <label htmlFor="limit" className="block text-sm font-medium">
-            Limit:
-          </label>
-          <select
-            id="limit"
-            name="limit"
-            className="select select-xs select-bordered w-full  max-w-xs"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-          >
-            <option value="11">11</option>
-            <option value="15">15</option>
-          </select>
-        </div>
-        <button
-          className="btn btn-xs btn-ghost btn-square"
-          disabled={page >= Math.ceil(total / limit)}
-          onClick={() => setPage((prev) => prev + 1)}
-        >
-          <img src={right} alt="next" />
-        </button>
-      </div>
     </div>
   )
 }

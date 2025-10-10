@@ -9,7 +9,12 @@ import {
   AllCustomers,
   CreateSaleData,
   CreateCustomerData,
-  ApiFilters
+  ApiFilters,
+  PaymentHistoryRecord,
+  OutstandingPayment,
+  PaymentProcessData,
+  CustomerCreditUpdate,
+  OutstandingFilters
 } from './api.types'
 
 export class DatabaseOperations {
@@ -185,10 +190,12 @@ export class DatabaseOperations {
     updates: Partial<CreateCustomerData>
   ): Promise<ApiResponse<any>> {
     try {
-      // Validate the update data first
-      const validationResult = await this.validateCustomerData(updates as CreateCustomerData)
-      if (!validationResult.success) {
-        return validationResult
+      // Only validate if we have actual data to validate
+      if (Object.keys(updates).length > 0) {
+        const validationResult = await this.validateCustomerData(updates as CreateCustomerData)
+        if (!validationResult.success) {
+          return validationResult
+        }
       }
 
       const customer = await dbManager.updateCustomer(id, updates)
@@ -306,7 +313,460 @@ export class DatabaseOperations {
     }
   }
 
-  // Utility operations
+  // ===== PAYMENT OPERATIONS =====
+
+  /**
+   * Process a payment for a customer's outstanding balance
+   * Automatically applies payment to oldest outstanding sales first
+   */
+  async processPayment(paymentData: PaymentProcessData): Promise<ApiResponse<any>> {
+    try {
+      // Validate payment data
+      const validation = await this.validatePaymentData(paymentData)
+      if (!validation.success) {
+        return validation
+      }
+
+      // Check if customer exists and has outstanding balance
+      const customerCheck = await this.validateCustomerForPayment(paymentData.customerId)
+      if (!customerCheck.success) {
+        return customerCheck
+      }
+
+      // Process the payment
+      const result = await dbManager.processPayment(paymentData)
+
+      return {
+        success: true,
+        data: result,
+        msg: `Payment of ${paymentData.amount} processed successfully. ${result.amountApplied} applied to outstanding balance.`
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to process payment'
+      }
+    }
+  }
+
+  /**
+   * Get all outstanding payments with optional filtering
+   */
+  async getOutstandingPayments(filters: OutstandingFilters = {}): Promise<ApiResponse<any>> {
+    try {
+      const result = await dbManager.getOutstandingPayments(filters)
+
+      return {
+        success: true,
+        data: {
+          outstandingPayments: result.outstandingPayments,
+          totalAmount: result.totalAmount,
+          totalCustomers: result.outstandingPayments.length,
+          summary: this.generateOutstandingSummary(result.outstandingPayments)
+        },
+        msg: 'Outstanding payments retrieved successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to retrieve outstanding payments'
+      }
+    }
+  }
+
+  /**
+   * Get detailed payment information for a specific customer
+   */
+  async getCustomerPaymentDetails(customerId: number): Promise<ApiResponse<any>> {
+    try {
+      // Validate customer exists
+      const customerExists = await dbManager.getCustomerById(customerId)
+      if (!customerExists) {
+        return {
+          success: false,
+          error: 'Customer not found',
+          msg: 'Customer not found'
+        }
+      }
+
+      const result = await dbManager.getCustomerPaymentDetails(customerId)
+
+      // Add calculated fields for better frontend integration
+      const enhancedResult = {
+        ...result,
+        agingAnalysis: this.calculateAgingAnalysis(result.outstandingSales),
+        paymentSummary: this.generatePaymentSummary(result.paymentHistory),
+        creditUtilization: result.customer.credit_limit
+          ? (result.totalOutstanding / result.customer.credit_limit) * 100
+          : 0
+      }
+
+      return {
+        success: true,
+        data: enhancedResult,
+        msg: 'Customer payment details retrieved successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to retrieve customer payment details'
+      }
+    }
+  }
+
+  /**
+   * Update customer credit settings
+   */
+  async updateCustomerCredit(creditData: CustomerCreditUpdate): Promise<ApiResponse<any>> {
+    try {
+      // Validate credit data
+      const validation = await this.validateCreditData(creditData)
+      if (!validation.success) {
+        return validation
+      }
+
+      const customer = await dbManager.updateCustomerCredit(creditData)
+      if (!customer) {
+        return {
+          success: false,
+          error: 'Customer not found',
+          msg: 'Customer not found'
+        }
+      }
+
+      return {
+        success: true,
+        data: customer,
+        msg: 'Customer credit settings updated successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to update customer credit settings'
+      }
+    }
+  }
+
+  /**
+   * Get payment history with optional customer filter
+   */
+  async getPaymentHistory(
+    customerId?: number,
+    limit = 100
+  ): Promise<ApiResponse<PaymentHistoryRecord[]>> {
+    try {
+      const history = await dbManager.getPaymentHistory(customerId, limit)
+
+      return {
+        success: true,
+        data: history,
+        msg: `Payment history retrieved successfully. ${history.length} records found.`
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to retrieve payment history'
+      }
+    }
+  }
+
+  /**
+   * Generate outstanding payments report
+   */
+  async getOutstandingPaymentsReport(filters: OutstandingFilters = {}): Promise<ApiResponse<any>> {
+    try {
+      const outstandingData = await this.getOutstandingPayments(filters)
+      if (!outstandingData.success) {
+        return outstandingData
+      }
+
+      const payments = outstandingData.data.outstandingPayments
+
+      const report = {
+        summary: {
+          totalCustomers: payments.length,
+          totalOutstanding: payments.reduce((sum, p) => sum + p.total_outstanding, 0),
+          averageOutstanding:
+            payments.length > 0
+              ? payments.reduce((sum, p) => sum + p.total_outstanding, 0) / payments.length
+              : 0
+        },
+        agingBreakdown: this.generateAgingBreakdown(payments),
+        topDebtors: payments
+          .sort((a, b) => b.total_outstanding - a.total_outstanding)
+          .slice(0, 10)
+          .map((p) => ({
+            customerName: p.customer_name,
+            outstandingAmount: p.total_outstanding,
+            daysPastDue: p.days_outstanding,
+            salesCount: p.outstanding_sales_count
+          })),
+        riskAnalysis: this.generateRiskAnalysis(payments),
+        generatedAt: new Date().toISOString()
+      }
+
+      return {
+        success: true,
+        data: report,
+        msg: 'Outstanding payments report generated successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Failed to generate outstanding payments report'
+      }
+    }
+  }
+
+  // ===== PAYMENT VALIDATION METHODS =====
+
+  private async validatePaymentData(
+    paymentData: PaymentProcessData
+  ): Promise<ApiResponse<boolean>> {
+    const errors: string[] = []
+
+    if (!paymentData.customerId || paymentData.customerId <= 0) {
+      errors.push('Valid customer ID is required')
+    }
+
+    if (!paymentData.amount || paymentData.amount <= 0) {
+      errors.push('Payment amount must be greater than 0')
+    }
+
+    if (paymentData.amount > 1000000) {
+      errors.push('Payment amount exceeds maximum allowed limit')
+    }
+
+    if (paymentData.paymentMethod && !this.isValidPaymentMethod(paymentData.paymentMethod)) {
+      errors.push('Invalid payment method')
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        error: errors.join(', '),
+        msg: 'Payment data validation failed'
+      }
+    }
+
+    return {
+      success: true,
+      data: true,
+      msg: 'Payment data validation passed'
+    }
+  }
+
+  private async validateCustomerForPayment(customerId: number): Promise<ApiResponse<boolean>> {
+    try {
+      const customer = await dbManager.getCustomerById(customerId)
+      if (!customer) {
+        return {
+          success: false,
+          error: 'Customer not found',
+          msg: 'Customer does not exist'
+        }
+      }
+
+      // Check if customer has outstanding balance
+      const outstanding = await dbManager.getOutstandingPayments({
+        searchTerm: customer.id.toString()
+      })
+
+      if (outstanding.outstandingPayments.length === 0) {
+        return {
+          success: false,
+          error: 'Customer has no outstanding balance',
+          msg: 'No outstanding payments found for this customer'
+        }
+      }
+
+      return {
+        success: true,
+        data: true,
+        msg: 'Customer validation passed'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        msg: 'Customer validation failed'
+      }
+    }
+  }
+
+  private async validateCreditData(
+    creditData: CustomerCreditUpdate
+  ): Promise<ApiResponse<boolean>> {
+    const errors: string[] = []
+
+    if (!creditData.customerId || creditData.customerId <= 0) {
+      errors.push('Valid customer ID is required')
+    }
+
+    if (creditData.creditLimit !== null && creditData.creditLimit < 0) {
+      errors.push('Credit limit cannot be negative')
+    }
+
+    if (creditData.creditLimit && creditData.creditLimit > 10000000) {
+      errors.push('Credit limit exceeds maximum allowed amount')
+    }
+
+    if (!creditData.paymentTerms || creditData.paymentTerms.trim().length === 0) {
+      errors.push('Payment terms are required')
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        error: errors.join(', '),
+        msg: 'Credit data validation failed'
+      }
+    }
+
+    return {
+      success: true,
+      data: true,
+      msg: 'Credit data validation passed'
+    }
+  }
+
+  // ===== HELPER METHODS FOR PAYMENT ANALYTICS =====
+
+  private generateOutstandingSummary(payments: OutstandingPayment[]): {
+    current: { count: number; amount: number }
+    overdue: { count: number; amount: number }
+  } {
+    const currentPayments = payments.filter((p) => p.days_outstanding <= 30)
+    const overduePayments = payments.filter((p) => p.days_outstanding > 30)
+
+    return {
+      current: {
+        count: currentPayments.length,
+        amount: currentPayments.reduce((sum, p) => sum + p.total_outstanding, 0)
+      },
+      overdue: {
+        count: overduePayments.length,
+        amount: overduePayments.reduce((sum, p) => sum + p.total_outstanding, 0)
+      }
+    }
+  }
+
+  private calculateAgingAnalysis(sales: any[]): {
+    current: { count: number; amount: number }
+    '31-60': { count: number; amount: number }
+    '61-90': { count: number; amount: number }
+    '90+': { count: number; amount: number }
+  } {
+    const aging = {
+      current: { count: 0, amount: 0 },
+      '31-60': { count: 0, amount: 0 },
+      '61-90': { count: 0, amount: 0 },
+      '90+': { count: 0, amount: 0 }
+    }
+
+    sales.forEach((sale) => {
+      const days = Math.floor(
+        (Date.now() - new Date(sale.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      if (days <= 30) {
+        aging.current.count++
+        aging.current.amount += sale.outstanding_amount
+      } else if (days <= 60) {
+        aging['31-60'].count++
+        aging['31-60'].amount += sale.outstanding_amount
+      } else if (days <= 90) {
+        aging['61-90'].count++
+        aging['61-90'].amount += sale.outstanding_amount
+      } else {
+        aging['90+'].count++
+        aging['90+'].amount += sale.outstanding_amount
+      }
+    })
+
+    return aging
+  }
+
+  private generatePaymentSummary(paymentHistory: any[]): {
+    totalPaid: number
+    paymentCount: number
+    lastPayment: { amount: number; date: string; method: string } | null
+    averagePayment: number
+  } {
+    const totalPaid = paymentHistory.reduce((sum, payment) => sum + payment.payment_amount, 0)
+    const lastPayment = paymentHistory.length > 0 ? paymentHistory[0] : null
+
+    return {
+      totalPaid,
+      paymentCount: paymentHistory.length,
+      lastPayment: lastPayment
+        ? {
+            amount: lastPayment.payment_amount,
+            date: lastPayment.payment_date,
+            method: lastPayment.payment_method
+          }
+        : null,
+      averagePayment: paymentHistory.length > 0 ? totalPaid / paymentHistory.length : 0
+    }
+  }
+
+  private generateAgingBreakdown(payments: OutstandingPayment[]): { [key: string]: number } {
+    return {
+      current: payments.filter((p) => p.days_outstanding <= 30).length,
+      '31-60': payments.filter((p) => p.days_outstanding > 30 && p.days_outstanding <= 60).length,
+      '61-90': payments.filter((p) => p.days_outstanding > 60 && p.days_outstanding <= 90).length,
+      '90+': payments.filter((p) => p.days_outstanding > 90).length
+    }
+  }
+
+  private generateRiskAnalysis(payments: OutstandingPayment[]): {
+    highRisk: { count: number; amount: number }
+    mediumRisk: { count: number; amount: number }
+    lowRisk: { count: number; amount: number }
+  } {
+    const highRisk = payments.filter(
+      (p) => p.days_outstanding > 90 || (p.credit_limit && p.total_outstanding > p.credit_limit)
+    )
+    const mediumRisk = payments.filter((p) => p.days_outstanding > 60 && p.days_outstanding <= 90)
+    const lowRisk = payments.filter((p) => p.days_outstanding <= 60)
+
+    return {
+      highRisk: {
+        count: highRisk.length,
+        amount: highRisk.reduce((sum, p) => sum + p.total_outstanding, 0)
+      },
+      mediumRisk: {
+        count: mediumRisk.length,
+        amount: mediumRisk.reduce((sum, p) => sum + p.total_outstanding, 0)
+      },
+      lowRisk: {
+        count: lowRisk.length,
+        amount: lowRisk.reduce((sum, p) => sum + p.total_outstanding, 0)
+      }
+    }
+  }
+
+  private isValidPaymentMethod(method: string): boolean {
+    const validMethods = [
+      'cash',
+      'card',
+      'credit_card',
+      'debit_card',
+      'bank_transfer',
+      'check',
+      'mobile_payment',
+      'other'
+    ]
+    return validMethods.includes(method.toLowerCase())
+  }
+
+  // Utility operations (keeping existing ones)
   private async validateStockAvailability(products: any[]): Promise<ApiResponse<boolean>> {
     try {
       for (const productSale of products) {

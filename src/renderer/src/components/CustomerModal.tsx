@@ -1,11 +1,14 @@
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { CreateCustomerData } from '../../../main/api.types'
+import NotificationBar from './NotificationBar'
+import toast from 'react-hot-toast'
 
 interface Props {
   onClose: () => void
+  onSuccess?: () => void
 }
 
-const CustomerModal = ({ onClose }: Props): React.JSX.Element => {
+const CustomerModal = ({ onClose, onSuccess }: Props): React.JSX.Element => {
   const {
     register,
     handleSubmit,
@@ -16,109 +19,105 @@ const CustomerModal = ({ onClose }: Props): React.JSX.Element => {
   const submitHandler: SubmitHandler<CreateCustomerData> = async (data) => {
     try {
       const newCustomer = await window.electronAPI?.customers?.create(data)
-      // alert(`${newCustomer.data.name} added successfully!`)
-      const toast = document.createElement('div')
-      toast.className = 'toast toast-top toast-center'
-      toast.innerHTML = `<div class="alert alert-success">${newCustomer.data.name} added successfully!</div>`
-      document.body.appendChild(toast)
-      setTimeout(() => toast.remove(), 3000)
+      toast.success(`${newCustomer.data.name} added successfully!`)
+
       reset({ name: '', phone: '', address: '' })
       onClose()
+      onSuccess && onSuccess()
     } catch (error) {
-      const toast = document.createElement('div')
-      toast.className = 'toast toast-top toast-center'
-      toast.innerHTML = `<div class="alert alert-error">Failed to add new customer!</div>`
-      document.body.appendChild(toast)
-      setTimeout(() => toast.remove(), 3000)
+      toast.error('Failed to add customer. Please try again.')
       console.error('Error adding customer:', error)
     }
   }
 
   return (
-    <dialog id="add_customer" className="modal">
-      <div className="modal-box">
-        <h3 className="font-bold text-center">Add New Customer</h3>
-        <form onSubmit={handleSubmit(submitHandler)}>
-          <button
-            type="button"
-            className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-            onClick={() => onClose()}
-          >
-            ✕
-          </button>
-
-          {/* inputs */}
-          <div className="mt-5 flex flex-col justify-center items-center">
-            <div className="flex flex-col pb-2 w-full max-w-xs">
-              <label className="font-semibold pb-1" htmlFor="name">
-                Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                className="input input-bordered"
-                {...register('name', {
-                  required: 'Name is required',
-                  minLength: { value: 3, message: 'Name must be at least 3 characters' },
-                  maxLength: { value: 40, message: 'Name must be less than 40 characters' }
-                })}
-              />
-              {errors.name && (
-                <p role="alert" className="text-error text-sm">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col pb-2 w-full max-w-xs">
-              <label className="font-semibold pb-1" htmlFor="address">
-                Address
-              </label>
-              <input
-                id="address"
-                type="text"
-                className="input input-bordered"
-                {...register('address', {
-                  required: 'Address is required',
-                  minLength: { value: 3, message: 'Address must be at least 3 characters' },
-                  maxLength: { value: 100, message: 'Address must be less than 100 characters' }
-                })}
-                required
-              />
-              {errors.address && (
-                <p role="alert" className="text-error text-sm">
-                  {errors.address.message}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col pb-2 w-full max-w-xs">
-              <label className="font-semibold pb-1" htmlFor="phone">
-                Contact
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                className="input input-bordered"
-                {...register('phone', {
-                  required: 'Phone number is required',
-                  pattern: { value: /^\+?\d{10,15}$/, message: 'Enter a valid phone number' }
-                })}
-              />
-              {errors.phone && (
-                <p role="alert" className="text-error text-sm">
-                  {errors.phone.message}
-                </p>
-              )}
-            </div>
-
-            <button type="submit" className="my-4 btn btn-accent w-full max-w-xs">
-              Save Customer
+    <>
+      <NotificationBar />
+      <dialog id="add_customer" className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-center">Add New Customer</h3>
+          <form onSubmit={handleSubmit(submitHandler)}>
+            <button
+              type="button"
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+              onClick={() => onClose()}
+            >
+              ✕
             </button>
-          </div>
-        </form>
-      </div>
-    </dialog>
+
+            {/* inputs */}
+            <div className="mt-5 flex flex-col justify-center items-center">
+              <div className="flex flex-col pb-2 w-full max-w-xs">
+                <label className="font-semibold pb-1" htmlFor="name">
+                  Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  className="input input-bordered"
+                  {...register('name', {
+                    required: 'Name is required',
+                    minLength: { value: 3, message: 'Name must be at least 3 characters' },
+                    maxLength: { value: 40, message: 'Name must be less than 40 characters' }
+                  })}
+                />
+                {errors.name && (
+                  <p role="alert" className="text-error text-sm">
+                    {errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col pb-2 w-full max-w-xs">
+                <label className="font-semibold pb-1" htmlFor="address">
+                  Address
+                </label>
+                <input
+                  id="address"
+                  type="text"
+                  className="input input-bordered"
+                  {...register('address', {
+                    required: 'Address is required',
+                    minLength: { value: 3, message: 'Address must be at least 3 characters' },
+                    maxLength: { value: 100, message: 'Address must be less than 100 characters' }
+                  })}
+                  required
+                />
+                {errors.address && (
+                  <p role="alert" className="text-error text-sm">
+                    {errors.address.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col pb-2 w-full max-w-xs">
+                <label className="font-semibold pb-1" htmlFor="phone">
+                  Contact
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  className="input input-bordered"
+                  {...register('phone', {
+                    required: 'Phone number is required',
+                    pattern: { value: /^\+?\d{10,15}$/, message: 'Enter a valid phone number' }
+                  })}
+                />
+                {errors.phone && (
+                  <p role="alert" className="text-error text-sm">
+                    {errors.phone.message}
+                  </p>
+                )}
+              </div>
+
+              <button type="submit" className="my-4 btn btn-accent w-full max-w-xs">
+                Save Customer
+              </button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+    </>
   )
 }
 

@@ -11,7 +11,7 @@ import { NavLink } from 'react-router-dom'
 
 const Sidebar = (): React.JSX.Element => {
   return (
-    <aside className="w-16 bg-[#003849] h-screen">
+    <aside className="controls w-16 bg-[#003849] h-screen">
       <img src={logo} alt="logo" className="mb-10" />
       <ul className="menu p-0">
         <li>

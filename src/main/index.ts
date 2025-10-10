@@ -3,7 +3,16 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { dbManager } from './database'
 import { dbOperations } from './database-operations'
-import { CreateProductData, CreateSaleData, CreateCustomerData, ApiFilters } from './api.types'
+import { promises as fs } from 'fs' // Added for file system operations
+import {
+  CreateProductData,
+  CreateSaleData,
+  CreateCustomerData,
+  ApiFilters,
+  PaymentProcessData,
+  CustomerCreditUpdate,
+  OutstandingFilters
+} from './api.types'
 import icon from '../../resources/icon.png?asset'
 
 let mainWindow: BrowserWindow
@@ -172,6 +181,78 @@ const setupIpcHandlers = (): void => {
       title,
       message
     })
+  })
+
+  // Process payment
+  ipcMain.handle('payments:process', async (_event, paymentData: PaymentProcessData) => {
+    return await dbOperations.processPayment(paymentData)
+  })
+
+  // Get outstanding payments with filters
+  ipcMain.handle('payments:getOutstanding', async (_event, filters: OutstandingFilters = {}) => {
+    return await dbOperations.getOutstandingPayments(filters)
+  })
+
+  // Get detailed payment information for a customer
+  ipcMain.handle('payments:getCustomerDetails', async (_event, customerId: number) => {
+    return await dbOperations.getCustomerPaymentDetails(customerId)
+  })
+
+  // Get payment history
+  ipcMain.handle('payments:getHistory', async (_event, customerId?: number, limit = 100) => {
+    return await dbOperations.getPaymentHistory(customerId, limit)
+  })
+
+  // Get outstanding payments report
+  ipcMain.handle('payments:getReport', async (_event, filters: OutstandingFilters = {}) => {
+    return await dbOperations.getOutstandingPaymentsReport(filters)
+  })
+
+  // ===== CUSTOMER CREDIT HANDLERS =====
+
+  // Update customer credit settings
+  ipcMain.handle('customers:updateCredit', async (_event, creditData: CustomerCreditUpdate) => {
+    return await dbOperations.updateCustomerCredit(creditData)
+  })
+
+  // Get customer with credit info (enhance existing getById handler or add new one)
+  ipcMain.handle('customers:getById', async (_event, id: number) => {
+    return await dbOperations.getCustomerById(id)
+  })
+
+  // ✨ NEW PDF HANDLER ADDED HERE
+  ipcMain.handle('app:save-pdf', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return { success: false, error: 'Could not find the source window.' }
+
+    try {
+      // 1. Generate PDF data from the window's contents
+      const pdfData = await win.webContents.printToPDF({
+        pageSize: 'A4',
+        printBackground: true,
+        landscape: false
+      })
+
+      // 2. Show a "Save As" dialog to the user
+      const { canceled, filePath } = await dialog.showSaveDialog(win, {
+        title: 'Save Report as PDF',
+        defaultPath: `report-${Date.now()}.pdf`,
+        filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+      })
+
+      // 3. If the user didn't cancel, write the file to the chosen path
+      if (!canceled && filePath) {
+        await fs.writeFile(filePath, pdfData)
+        return { success: true, path: filePath }
+      }
+
+      return { success: true, canceled: true } // User cancelled the save dialog
+    } catch (error) {
+      console.error('Failed to save PDF:', error)
+      const message = error instanceof Error ? error.message : String(error)
+      dialog.showErrorBox('PDF Error', `Failed to save the PDF. Reason: ${message}`)
+      return { success: false, error: message }
+    }
   })
 }
 

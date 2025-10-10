@@ -1,0 +1,31 @@
+@media print {
+  /* Hide the button and other non-essential UI */
+  .controls {
+    display: none;
+  }
+
+  /* Reset body margins for printing */
+  body {
+    margin: 0.5in; /* Or your preferred margin */
+  }
+
+  .maggi {
+    margin: 0px;
+    padding: 0px;
+  }
+
+  /* Ensure table headers repeat on each new page */
+  thead {
+    display: table-header-group;
+  }
+
+  /* Ensure table footers repeat (optional) */
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* Prevent rows from being split across pages */
+  tr {
+    page-break-inside: avoid;
+  }
+}

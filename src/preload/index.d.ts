@@ -15,6 +15,7 @@ interface ElectronAPI {
     adjust: (productId: number, newQuantity: number, reason?: string) => Promise<any>
   }
   customers: {
+    updateCredit: (creditData: CustomerCreditUpdate) => Promise<any>
     create: (customerData: CreateCustomerData) => Promise<any>
     getAll: (filters?: ApiFilters) => Promise<any>
     search: (searchTerm: string, filters?: ApiFilters) => Promise<any>
@@ -36,6 +37,14 @@ interface ElectronAPI {
     backup: () => Promise<any>
     showError: (title: string, message: string) => Promise<void>
     showMessage: (title: string, message: string) => Promise<void>
+    savePdf: () => Promise<>
+  }
+  payments: {
+    process: (paymentData: PaymentProcessData) => Promise<any>
+    getOutstanding: (filters?: OutstandingFilters) => Promise<any>
+    getCustomerDetails: (customerId: number) => Promise<any>
+    getHistory: (customerId?: number, limit?: number) => Promise<any>
+    getReport: (filters?: OutstandingFilters) => Promise<any>
   }
 }
 

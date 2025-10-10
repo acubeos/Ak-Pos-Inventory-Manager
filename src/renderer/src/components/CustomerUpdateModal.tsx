@@ -1,6 +1,8 @@
 import { JSX, useEffect } from 'react'
 import { CreateCustomerData } from 'src/main/api.types'
 import { SubmitHandler, useForm } from 'react-hook-form'
+import NotificationBar from './NotificationBar'
+import toast from 'react-hot-toast'
 
 interface Props {
   selectedCustomer: CreateCustomerData | null
@@ -37,33 +39,21 @@ const CustomerUpdateModal = ({ selectedCustomer, onClose, onUpdated }: Props): J
       })
 
       if (res.success) {
+        toast.success('Customer updated successfully!')
         onUpdated(res.data)
         onClose()
-        const toast = document.createElement('div')
-        toast.className = 'toast toast-top toast-center'
-        toast.innerHTML = `<div class="alert alert-error px-5 py-2">${res.data.name} Modified successfully!</div>`
-        document.body.appendChild(toast)
-        setTimeout(() => toast.remove(), 3000)
       } else {
         // alert('Update failed: ' + res.error)
-        const toast = document.createElement('div')
-        toast.className = 'toast toast-top toast-center'
-        toast.innerHTML = `<div class="alert alert-warning">${'Update failed: ' + res.error}</div>`
-        document.body.appendChild(toast)
-        setTimeout(() => toast.remove(), 3000)
+        toast.error('Update failed: ' + res.error)
       }
     } catch (err) {
-      // alert('Error: ' + (err instanceof Error ? err.message : String(err)))
-      const toast = document.createElement('div')
-      toast.className = 'toast toast-top toast-center'
-      toast.innerHTML = `<div class="alert alert-error">${'Error: ' + (err instanceof Error ? err.message : String(err))}</div>`
-      document.body.appendChild(toast)
-      setTimeout(() => toast.remove(), 3000)
+      toast.error('Error updating customer: ' + (err as Error).message)
     }
   }
 
   return (
     <>
+      <NotificationBar />
       <dialog id="modify_customer" className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg text-center">Modify Customer</h3>
