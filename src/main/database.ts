@@ -714,7 +714,12 @@ export class DatabaseManager {
         [paymentData.customerId]
       )
 
-      const updatedSales = []
+      const updatedSales: {
+        saleId: number
+        amountPaid: number
+        newOutstanding: number
+        paymentStatus: string
+      }[] = []
 
       for (const sale of outstandingSales) {
         if (remainingAmount <= 0) break
@@ -762,7 +767,7 @@ export class DatabaseManager {
 
         remainingAmount -= paymentForThisSale
         updatedSales.push({
-          saleId: sale.id,
+          saleId: Number(sale.id),
           amountPaid: paymentForThisSale,
           newOutstanding,
           paymentStatus

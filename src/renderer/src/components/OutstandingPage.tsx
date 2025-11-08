@@ -27,7 +27,12 @@ interface PaymentModalProps {
   isOpen: boolean
   sale: OutstandingSale | null
   onClose: () => void
-  onPayment: (customerId: number, amount: number, isPartial: boolean) => Promise<void>
+  onPayment: (
+    customerId: number,
+    amount: number,
+    isPartial: boolean,
+    paymentMethod: string
+  ) => Promise<void>
 }
 
 interface CustomerDetailModalProps {
@@ -58,7 +63,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, sale, onClose, onPa
     if (amount > 0 && amount <= (sale?.outstanding || 0)) {
       setIsProcessing(true)
       try {
-        await onPayment(sale!.id, amount, amount < sale!.outstanding)
+        await onPayment(sale!.id, amount, amount < sale!.outstanding, paymentMethod)
         onClose()
       } catch (error) {
         console.error('Payment failed:', error)
@@ -610,18 +615,18 @@ const Outstanding = (): React.JSX.Element => {
   }
 
   // Payment handling with new backend API
+
   const handlePayment = async (
     customerId: number,
     amount: number,
-    isPartial: boolean
+    isPartial: boolean,
+    paymentMethod: string = 'cash' // <-- ADD THIS ARGUMENT (with default)
   ): Promise<void> => {
     try {
-      const paymentMethod = paymentModal.sale ? 'cash' : 'cash' // Get from modal state if needed
-
       const response = await window.electronAPI?.payments.process({
         customerId,
         amount,
-        paymentMethod,
+        paymentMethod, // <-- This now correctly uses the function argument
         notes: isPartial ? `Partial payment of ${formatCurrency(amount)}` : 'Full payment'
       })
 
