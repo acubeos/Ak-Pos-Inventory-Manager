@@ -229,6 +229,7 @@ export interface CustomerCreditUpdate {
 export interface OutstandingFilters extends ApiFilters {
   agingFilter?: 'all' | 'current' | 'overdue' | '31-60' | '61-90' | '90+'
   searchTerm?: string
+  customerId?: number
 }
 
 // Update existing Customer interface to include credit fields

@@ -575,10 +575,10 @@ export class DatabaseOperations {
 
       // Check if customer has outstanding balance
       const outstanding = await dbManager.getOutstandingPayments({
-        searchTerm: customer.id.toString()
+        customerId: customer.id
       })
 
-      if (outstanding.outstandingPayments.length === 0) {
+      if (outstanding.totalAmount <= 0) {
         return {
           success: false,
           error: 'Customer has no outstanding balance',

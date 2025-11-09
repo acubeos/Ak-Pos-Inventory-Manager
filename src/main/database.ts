@@ -807,6 +807,12 @@ export class DatabaseManager {
     let query = `SELECT * FROM outstanding_payments_view WHERE 1=1`
     const params: any[] = []
 
+    // Add customer ID filter
+    if (filters.customerId) {
+      query += ` AND customer_id = ?`
+      params.push(filters.customerId)
+    }
+
     if (filters.searchTerm) {
       query += ` AND (customer_name LIKE ? OR customer_phone LIKE ?)`
       params.push(`%${filters.searchTerm}%`, `%${filters.searchTerm}%`)
