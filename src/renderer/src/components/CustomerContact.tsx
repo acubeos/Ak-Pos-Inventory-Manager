@@ -2,7 +2,7 @@ import editIcon from '../assets/icons/editIcon.png'
 import left from '../assets/icons/icon-left.png'
 import right from '../assets/icons/icon-right.png'
 
-import React, { JSX, useEffect } from 'react'
+import React, { JSX, useEffect, useCallback } from 'react'
 import { CreateCustomerData } from '../../../main/api.types'
 import CustomerModal from './CustomerModal'
 import CustomerUpdateModal from './CustomerUpdateModal'
@@ -15,28 +15,29 @@ const CustomerContact = (): JSX.Element => {
   const [limit, setLimit] = React.useState(11)
   const [selectedCustomer, setSelectedCustomer] = React.useState<CreateCustomerData | null>(null)
 
-  useEffect(() => {
-    const fetchCustomers = async (): Promise<void> => {
-      if (!window.electronAPI?.customers.getAll) {
-        console.error('getAllCustomers API not available')
-        return
-      }
-      try {
-        const customerList = await window.electronAPI.customers.getAll({ page, limit })
-        // console.log('Fetched Customers:', customerList)
-        if (customerList && Array.isArray(customerList.data.customers)) {
-          setCustomers(customerList.data.customers) // for APIs that wrap data
-          setTotal(customerList.data.total) // for APIs that return total count
-        } else {
-          setCustomers([]) // fallback to empty array
-          setTotal(0) // reset total if no customers found
-        }
-      } catch (error) {
-        console.error('Failed to fetch customers:', error)
-      }
+  const fetchCustomers = useCallback(async (): Promise<void> => {
+    if (!window.electronAPI?.customers.getAll) {
+      console.error('getAllCustomers API not available')
+      return
     }
+    try {
+      const customerList = await window.electronAPI.customers.getAll({ page, limit })
+      // console.log('Fetched Customers:', customerList)
+      if (customerList && Array.isArray(customerList.data.customers)) {
+        setCustomers(customerList.data.customers) // for APIs that wrap data
+        setTotal(customerList.data.total) // for APIs that return total count
+      } else {
+        setCustomers([]) // fallback to empty array
+        setTotal(0) // reset total if no customers found
+      }
+    } catch (error) {
+      console.error('Failed to fetch customers:', error)
+    }
+  }, [page, limit])
+
+  useEffect(() => {
     fetchCustomers()
-  }, [customers, page, limit])
+  }, [fetchCustomers])
 
   return (
     <div className="bg-slate-100 ml-16 h-screen w-screen pr-16">
@@ -121,6 +122,7 @@ const CustomerContact = (): JSX.Element => {
           type="submit"
           onClick={() => {
             setSearchTerm('')
+            setPage(1)
           }}
           className="btn btn-sm btn-error btn-outline"
         >
@@ -174,6 +176,9 @@ const CustomerContact = (): JSX.Element => {
         onClose={() => {
           const modal = document.getElementById('add_customer') as HTMLDialogElement
           modal.close()
+        }}
+        onCustomerAdded={() => {
+          fetchCustomers()
         }}
       />
       <CustomerUpdateModal

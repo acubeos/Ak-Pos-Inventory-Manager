@@ -231,6 +231,11 @@ const OrderPage = (): React.JSX.Element => {
     const totalAmount = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
     const outstanding = Math.max(0, totalAmount - totalPaid)
 
+    if (totalPaid > totalAmount) {
+      toast.error('Amount paid cannot be more than goods bought')
+      return
+    }
+
     try {
       setLoading(true)
 

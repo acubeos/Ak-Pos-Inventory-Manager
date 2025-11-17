@@ -2,6 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { formatCurrency, formatDate } from '@renderer/helpers/general'
 import left from '../assets/icons/icon-left.png'
 import right from '../assets/icons/icon-right.png'
+import ConfirmDialog from './ConfirmDialog'
+import NotificationBar from './NotificationBar'
+import toast from 'react-hot-toast'
 
 interface OutstandingSale {
   id: number
@@ -76,101 +79,104 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, sale, onClose, onPa
   if (!isOpen || !sale) return null
 
   return (
-    <div className="modal modal-open">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">Process Payment</h3>
-        <div className="py-4">
-          <p>
-            <strong>Customer:</strong> {sale.Customer.name}
-          </p>
-          <p>
-            <strong>Outstanding:</strong> {formatCurrency(sale.outstanding)}
-          </p>
+    <>
+      <NotificationBar />
+      <div className="modal modal-open">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Process Payment</h3>
+          <div className="py-4">
+            <p>
+              <strong>Customer:</strong> {sale.Customer.name}
+            </p>
+            <p>
+              <strong>Outstanding:</strong> {formatCurrency(sale.outstanding)}
+            </p>
 
-          <div className="form-control mt-4">
-            <label className="label">
-              <span className="label-text">Payment Amount</span>
-            </label>
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={(e) => {
-                setPaymentAmount(e.target.value)
-                setIsPartialPayment(parseFloat(e.target.value) < sale.outstanding)
-              }}
-              className="input input-bordered"
-              max={sale.outstanding}
-              min={0}
-              step="0.01"
-              placeholder="Enter payment amount"
-              disabled={isProcessing}
-            />
-          </div>
-
-          <div className="form-control mt-3">
-            <label className="label">
-              <span className="label-text">Payment Method</span>
-            </label>
-            <select
-              className="select select-bordered"
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              disabled={isProcessing}
-              aria-label="Payment Method"
-            >
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="check">Check</option>
-              <option value="mobile_payment">Mobile Payment</option>
-            </select>
-          </div>
-
-          <div className="form-control mt-3">
-            <label className="label">
-              <span className="label-text">Notes (Optional)</span>
-            </label>
-            <textarea
-              className="textarea textarea-bordered"
-              placeholder="Add any notes about this payment..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={isProcessing}
-              rows={2}
-            />
-          </div>
-
-          {isPartialPayment && (
-            <div className="alert alert-info mt-3">
-              <span>
-                Remaining balance:{' '}
-                {formatCurrency(sale.outstanding - parseFloat(paymentAmount || '0'))}
-              </span>
+            <div className="form-control mt-4">
+              <label className="label">
+                <span className="label-text">Payment Amount</span>
+              </label>
+              <input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => {
+                  setPaymentAmount(e.target.value)
+                  setIsPartialPayment(parseFloat(e.target.value) < sale.outstanding)
+                }}
+                className="input input-bordered"
+                max={sale.outstanding}
+                min={0}
+                step="0.01"
+                placeholder="Enter payment amount"
+                disabled={isProcessing}
+              />
             </div>
-          )}
-        </div>
 
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <span className="loading loading-spinner loading-sm"></span>
-                Processing...
-              </>
-            ) : (
-              'Process Payment'
+            <div className="form-control mt-3">
+              <label className="label">
+                <span className="label-text">Payment Method</span>
+              </label>
+              <select
+                className="select select-bordered"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                disabled={isProcessing}
+                aria-label="Payment Method"
+              >
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="check">Check</option>
+                <option value="mobile_payment">Mobile Payment</option>
+              </select>
+            </div>
+
+            <div className="form-control mt-3">
+              <label className="label">
+                <span className="label-text">Notes (Optional)</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered"
+                placeholder="Add any notes about this payment..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isProcessing}
+                rows={2}
+              />
+            </div>
+
+            {isPartialPayment && (
+              <div className="alert alert-info mt-3">
+                <span>
+                  Remaining balance:{' '}
+                  {formatCurrency(sale.outstanding - parseFloat(paymentAmount || '0'))}
+                </span>
+              </div>
             )}
-          </button>
+          </div>
+
+          <div className="modal-action">
+            <button className="btn btn-ghost" onClick={onClose} disabled={isProcessing}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSubmit}
+              disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Processing...
+                </>
+              ) : (
+                'Process Payment'
+              )}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -391,7 +397,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
 const Outstanding = (): React.JSX.Element => {
   const [currentPage, setCurrentPage] = useState(1)
-  const [limit, setLimit] = useState(12)
+  const [limit, setLimit] = useState(8)
   const [isLoading, setIsLoading] = useState(true)
   const [outstandingSales, setOutstandingSales] = useState<OutstandingSale[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -638,12 +644,14 @@ const Outstanding = (): React.JSX.Element => {
       await fetchOutstandingData()
 
       // Show success message
-      alert(
+      toast.success(
         `Payment processed successfully!\n\nAmount: ${formatCurrency(amount)}\nApplied to: ${response.data.totalSalesUpdated} sale(s)`
       )
     } catch (err) {
       console.error('Payment processing failed:', err)
-      alert(`Payment processing failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(
+        `Payment processing failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+      )
       throw err
     }
   }
@@ -833,7 +841,13 @@ const Outstanding = (): React.JSX.Element => {
                         <div className="flex gap-1">
                           <button
                             className="btn btn-xs btn-primary"
-                            onClick={() => handlePayment(sale.id, sale.outstanding, false)}
+                            // onClick={() => handlePayment(sale.id, sale.outstanding, false)}
+                            onClick={() => {
+                              const modal = document.getElementById(
+                                'confirm'
+                              ) as HTMLDialogElement | null
+                              if (modal) modal.showModal()
+                            }}
                           >
                             Pay Full
                           </button>
@@ -843,6 +857,12 @@ const Outstanding = (): React.JSX.Element => {
                           >
                             Partial
                           </button>
+                          <ConfirmDialog
+                            id="confirm"
+                            title="Confirm Full Payment"
+                            onConfirm={() => handlePayment(sale.id, sale.outstanding, false)}
+                            message="Are you sure you want to pay the full outstanding amount?"
+                          />
                         </div>
                       </td>
                     </tr>

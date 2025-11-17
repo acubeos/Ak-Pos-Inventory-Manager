@@ -6,9 +6,10 @@ import toast from 'react-hot-toast'
 interface Props {
   onClose: () => void
   onSuccess?: () => void
+  onCustomerAdded?: () => void
 }
 
-const CustomerModal = ({ onClose, onSuccess }: Props): React.JSX.Element => {
+const CustomerModal = ({ onClose, onSuccess, onCustomerAdded }: Props): React.JSX.Element => {
   const {
     register,
     handleSubmit,
@@ -23,6 +24,7 @@ const CustomerModal = ({ onClose, onSuccess }: Props): React.JSX.Element => {
 
       reset({ name: '', phone: '', address: '' })
       onClose()
+      onCustomerAdded && onCustomerAdded()
       onSuccess && onSuccess()
     } catch (error) {
       toast.error('Failed to add customer. Please try again.')

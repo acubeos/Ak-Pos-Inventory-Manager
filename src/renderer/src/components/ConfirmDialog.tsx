@@ -31,12 +31,12 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <dialog id={id} className="modal">
       <div className="modal-box text-center">
         <h3 className="font-bold text-lg pb-4">{title}</h3>
-        <p>{message}</p>
-        <div className="mt-4 flex justify-center gap-4">
-          <button className="btn btn-error" onClick={handleConfirm}>
+        <p className="pb-4">{message}</p>
+        <div className="mt-4 mb-4 flex justify-center gap-4">
+          <button className="btn btn-accent btn-sm" onClick={handleConfirm}>
             {confirmText}
           </button>
-          <button className="btn btn-outline btn-accent" onClick={closeDialog}>
+          <button className="btn btn-outline btn-sm btn-error" onClick={closeDialog}>
             {cancelText}
           </button>
         </div>
