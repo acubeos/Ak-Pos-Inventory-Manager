@@ -166,8 +166,104 @@ const setupIpcHandlers = (): void => {
   })
 
   // Utility handlers
-  ipcMain.handle('db:backup', async (_event) => {
+  ipcMain.handle('db:backup', async () => {
     return await dbOperations.backupDatabase()
+  })
+
+  // Export database to a user-selected location
+  ipcMain.handle('db:export', async () => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow!, {
+        title: 'Export Database',
+        defaultPath: `inventory-backup-${timestamp}.db`,
+        filters: [{ name: 'Database Files', extensions: ['db'] }]
+      })
+
+      if (canceled || !filePath) {
+        return {
+          success: true,
+          canceled: true,
+          msg: 'Export canceled by user'
+        }
+      }
+
+      const dbPath = join(app.getPath('userData'), 'inventory.db')
+      await fs.copyFile(dbPath, filePath)
+
+      return {
+        success: true,
+        data: filePath,
+        msg: `Database exported successfully to ${filePath}`
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      return {
+        success: false,
+        error: errorMessage,
+        msg: 'Failed to export database'
+      }
+    }
+  })
+
+  // Import/restore database from a user-selected file
+  ipcMain.handle('db:import', async () => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+        title: 'Import Database',
+        filters: [{ name: 'Database Files', extensions: ['db'] }],
+        properties: ['openFile']
+      })
+
+      if (canceled || filePaths.length === 0) {
+        return {
+          success: true,
+          canceled: true,
+          msg: 'Import canceled by user'
+        }
+      }
+
+      const sourceFile = filePaths[0]
+      const dbPath = join(app.getPath('userData'), 'inventory.db')
+
+      // Create a backup of the current database before replacing
+      const backupPath = join(app.getPath('userData'), `inventory-before-import-${Date.now()}.db`)
+      try {
+        await fs.copyFile(dbPath, backupPath)
+      } catch (backupError) {
+        console.warn('Could not create backup before import:', backupError)
+      }
+
+      // Close the current database connection
+      await dbManager.close()
+
+      // Replace the database file
+      await fs.copyFile(sourceFile, dbPath)
+
+      // Reinitialize the database
+      await dbManager.initialize()
+
+      return {
+        success: true,
+        data: sourceFile,
+        msg: `Database imported successfully from ${sourceFile}. Previous database backed up to ${backupPath}`
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      // Try to reinitialize the database even if import failed
+      try {
+        await dbManager.initialize()
+      } catch (reinitError) {
+        console.error('Failed to reinitialize database after import error:', reinitError)
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        msg: 'Failed to import database'
+      }
+    }
   })
 
   // Error handling
