@@ -1,9 +1,9 @@
 {
-  "name": "my-app",
+  "name": "ak-enterprise",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "POS app and inventory management system",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "Aziz Akande",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
