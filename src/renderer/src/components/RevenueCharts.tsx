@@ -13,23 +13,23 @@ interface ChartData {
   sales: number
 }
 
+const monthMap: Record<string, string> = {
+  '01': 'Jan',
+  '02': 'Feb',
+  '03': 'Mar',
+  '04': 'Apr',
+  '05': 'May',
+  '06': 'Jun',
+  '07': 'Jul',
+  '08': 'Aug',
+  '09': 'Sep',
+  '10': 'Oct',
+  '11': 'Nov',
+  '12': 'Dec'
+}
+
 const RevenueCharts = (): React.JSX.Element => {
   const [chartData, setChartData] = useState<ChartData[]>([])
-
-  const monthMap: Record<string, string> = {
-    '01': 'Jan',
-    '02': 'Feb',
-    '03': 'Mar',
-    '04': 'Apr',
-    '05': 'May',
-    '06': 'Jun',
-    '07': 'Jul',
-    '08': 'Aug',
-    '09': 'Sep',
-    '10': 'Oct',
-    '11': 'Nov',
-    '12': 'Dec'
-  }
 
   useEffect(() => {
     const fetchMonthlyData = async (): Promise<void> => {
@@ -76,7 +76,9 @@ const RevenueCharts = (): React.JSX.Element => {
         <YAxis />
         <CartesianGrid strokeDasharray="3 3" />
         <Tooltip
-          formatter={(value) => `₦ ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          formatter={(value) =>
+            `₦ ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          }
         />
         <Area
           type="monotone"
