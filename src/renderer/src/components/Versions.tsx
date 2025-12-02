@@ -7,14 +7,19 @@ interface VersionInfo {
 }
 
 function Versions(): React.JSX.Element {
-  const windowElectron = (window as Record<string, unknown>).electron as Record<string, unknown>
-  const [versions] = useState<VersionInfo>(
-    windowElectron?.process?.versions || {
-      electron: '0',
-      chrome: '0',
-      node: '0'
+  const getVersions = (): VersionInfo => {
+    try {
+      const windowObj = window as unknown as Record<string, unknown>
+      const electronObj = windowObj.electron as Record<string, unknown>
+      const processObj = electronObj?.process as Record<string, unknown>
+      const versionsObj = processObj?.versions as VersionInfo
+      return versionsObj || { electron: '0', chrome: '0', node: '0' }
+    } catch {
+      return { electron: '0', chrome: '0', node: '0' }
     }
-  )
+  }
+
+  const [versions] = useState<VersionInfo>(getVersions())
 
   return (
     <ul className="versions">

@@ -270,7 +270,7 @@ const SalesHistory = (): React.JSX.Element => {
                       <td>{product.name || `Product ${product.product_id}`}</td>
                       <td>{product.quantity}</td>
                       <td>₦ {product.price?.toFixed(2)}</td>
-                      <td>₦ {(product.price * product.quantity).toFixed(2)}</td>
+                      <td>₦ {((product.price ?? 0) * product.quantity).toFixed(2)}</td>
                     </tr>
                   ))}
 
