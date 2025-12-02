@@ -73,7 +73,14 @@ const RevenueCharts = (): React.JSX.Element => {
           </linearGradient>
         </defs>
         <XAxis dataKey="name" />
-        <YAxis />
+        <YAxis
+          tickFormatter={(value) => {
+            if (value >= 1000000) {
+              return (value / 1000000).toFixed(1)
+            }
+            return value.toString()
+          }}
+        />
         <CartesianGrid strokeDasharray="3 3" />
         <Tooltip
           formatter={(value) =>
