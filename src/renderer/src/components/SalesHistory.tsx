@@ -20,39 +20,56 @@ const SalesHistory = (): React.JSX.Element => {
   const [loading, setLoading] = useState(false)
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
 
-  // Fetch sales data
-  const fetchSales = async (): Promise<void> => {
-    setLoading(true)
-    try {
-      const response = await window.electronAPI?.sales.getAll(filters)
-      if (response?.success) {
-        setSales(response.data.sales)
-        setTotalSales(response.data.total)
-      } else {
-        console.error('Failed to fetch sales:', response?.error)
-      }
-    } catch (error) {
-      console.error('Error fetching sales:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // Fetch sales on component mount and when filters change
   useEffect(() => {
+    const fetchSales = async (): Promise<void> => {
+      setLoading(true)
+      try {
+        const response = await window.electronAPI?.sales.getAll(filters)
+        if (response?.success) {
+          setSales(response.data.sales)
+          setTotalSales(response.data.total)
+        } else {
+          console.error('Failed to fetch sales:', response?.error)
+        }
+      } catch (error) {
+        console.error('Error fetching sales:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchSales()
   }, [filters])
 
-  const handleDateChange = (dateRange: {
-    startDate: string | null
-    endDate: string | null
-  }): void => {
+  const handleDateChange = (dateRange: { startDate: Date | null; endDate: Date | null }): void => {
+    // Convert Date objects to YYYY-MM-DD format
+    const formatDateForDB = (date: Date | null): string => {
+      if (!date) return ''
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
     setFilters((prev) => ({
       ...prev,
-      from: dateRange.startDate || '',
-      to: dateRange.endDate || '',
-      page: 1 // Reset to first page when filtering
+      from: formatDateForDB(dateRange.startDate),
+      to: formatDateForDB(dateRange.endDate),
+      page: 1
     }))
+  }
+
+  const handleReset = (): void => {
+    // Reset filters to initial state
+    setFilters({
+      from: '',
+      to: '',
+      limit: 10,
+      page: 1,
+      sort: '',
+      name: ''
+    })
   }
 
   const handleSearchSubmit = (e: React.FormEvent): void => {
@@ -116,12 +133,21 @@ const SalesHistory = (): React.JSX.Element => {
             />
 
             <button type="submit" className="btn btn-sm btn-accent btn-outline" disabled={loading}>
-              {loading ? 'Loading...' : 'Filter'}
+              {loading ? 'Loading...' : 'Search'}
+            </button>
+
+            <button
+              type="reset"
+              className="btn btn-sm btn-accent"
+              onClick={handleReset}
+              disabled={loading}
+            >
+              Reset
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto max-h-[420px]">
+        <div className="overflow-x-auto max-h-[400px]">
           <table className="table table-sm table-pin-rows">
             <thead className="bg-accent">
               <tr>

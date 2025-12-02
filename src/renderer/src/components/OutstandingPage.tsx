@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { formatCurrency, formatDate } from '@renderer/helpers/general'
-import left from '../assets/icons/icon-left.png'
-import right from '../assets/icons/icon-right.png'
 import ConfirmDialog from './ConfirmDialog'
 import NotificationBar from './NotificationBar'
 import toast from 'react-hot-toast'
@@ -396,8 +394,6 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 }
 
 const Outstanding = (): React.JSX.Element => {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [limit, setLimit] = useState(8)
   const [isLoading, setIsLoading] = useState(true)
   const [outstandingSales, setOutstandingSales] = useState<OutstandingSale[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -443,7 +439,6 @@ const Outstanding = (): React.JSX.Element => {
         setIsLoading(true)
         setError(null)
 
-        // Use the new payments API
         const response = await window.electronAPI?.payments.getOutstanding({
           agingFilter: filterBy === 'all' ? undefined : filterBy,
           searchTerm: searchTerm || undefined
@@ -455,7 +450,6 @@ const Outstanding = (): React.JSX.Element => {
 
         const { outstandingPayments } = response.data
 
-        // Map the data to our component format
         const mappedSales: OutstandingSale[] = outstandingPayments.map((payment) => ({
           id: payment.customer_id,
           last_updated: payment.last_updated,
@@ -498,11 +492,10 @@ const Outstanding = (): React.JSX.Element => {
   // Real-time updates
   useEffect(() => {
     fetchOutstandingData()
-    const interval = setInterval(fetchOutstandingData, 30000) // Refresh every 30s
+    const interval = setInterval(fetchOutstandingData, 30000)
     return () => clearInterval(interval)
   }, [fetchOutstandingData])
 
-  // Search and filter logic (removed - now handled by backend)
   const filteredSales = useMemo(() => outstandingSales, [outstandingSales])
 
   // Sorting
@@ -532,49 +525,36 @@ const Outstanding = (): React.JSX.Element => {
     return sorted
   }, [filteredSales, sortBy, sortOrder])
 
-  // Pagination
-  const totalPages = Math.ceil(sortedSales.length / limit)
-  const startIndex = (currentPage - 1) * limit
-  const endIndex = startIndex + limit
-  const currentSales = useMemo(
-    () => sortedSales.slice(startIndex, endIndex),
-    [sortedSales, startIndex, endIndex]
-  )
-
   // Total outstanding
   const totalOutstanding = useMemo(
     () => sortedSales.reduce((sum, sale) => sum + sale.outstanding, 0),
     [sortedSales]
   )
 
-  // Event handlers
-  const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setLimit(Number(e.target.value))
-    setCurrentPage(1)
-  }
-
-  const handlePrevious = (): void => setCurrentPage((prev) => Math.max(1, prev - 1))
-  const handleNext = (): void => setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-
-  const handlePageChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const pageNumber = Number(e.target.value)
-    if (pageNumber >= 1 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber)
-    }
-  }
-
-  const handlePageKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter') {
-      const pageNumber = Number(e.currentTarget.value)
-      if (pageNumber >= 1 && pageNumber <= totalPages) {
-        setCurrentPage(pageNumber)
-      } else {
-        e.currentTarget.value = currentPage.toString()
-      }
-    }
-  }
-
   const handlePrint = (): void => window.electronAPI?.utils.savePdf()
+
+  // const handlePrint = async (): Promise<void> => {
+  //   window.print()
+  // }
+
+  // const handlePrint = async (): Promise<void> => {
+  //   // 1. Add a class to force full render
+  //   document.body.classList.add('printing-pdf')
+
+  //   // 2. Small delay to let React render all rows
+  //   await new Promise((resolve) => setTimeout(resolve, 300))
+
+  //   // 3. Trigger PDF from main
+  //   const result = await window.electronAPI?.utils.savePdf()
+
+  //   // 4. Clean up
+  //   document.body.classList.remove('printing-pdf')
+
+  //   if (result?.success) {
+  //     toast.success(`PDF saved to ${result.path}`)
+  //   }
+  // }
+
   const handleRefresh = (): Promise<void> => fetchOutstandingData()
 
   const handleSort = (field: 'customer' | 'outstanding' | 'last_updated' | 'aging'): void => {
@@ -620,19 +600,17 @@ const Outstanding = (): React.JSX.Element => {
     URL.revokeObjectURL(url)
   }
 
-  // Payment handling with new backend API
-
   const handlePayment = async (
     customerId: number,
     amount: number,
     isPartial: boolean,
-    paymentMethod: string = 'cash' // <-- ADD THIS ARGUMENT (with default)
+    paymentMethod: string = 'cash'
   ): Promise<void> => {
     try {
       const response = await window.electronAPI?.payments.process({
         customerId,
         amount,
-        paymentMethod, // <-- This now correctly uses the function argument
+        paymentMethod,
         notes: isPartial ? `Partial payment of ${formatCurrency(amount)}` : 'Full payment'
       })
 
@@ -640,10 +618,8 @@ const Outstanding = (): React.JSX.Element => {
         throw new Error(response.error || 'Payment processing failed')
       }
 
-      // Refresh data after successful payment
       await fetchOutstandingData()
 
-      // Show success message
       toast.success(
         `Payment processed successfully!\n\nAmount: ${formatCurrency(amount)}\nApplied to: ${response.data.totalSalesUpdated} sale(s)`
       )
@@ -665,7 +641,7 @@ const Outstanding = (): React.JSX.Element => {
   }
 
   return (
-    <div className="maggi ml-16 h-screen w-screen pr-16 pt-4">
+    <div className="maggi ml-16 h-screen w-screen pr-16 pt-4 flex flex-col">
       <div className="flex justify-between pb-3 pl-2 px-4">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-semibold">Outstanding Balance</h1>
@@ -708,7 +684,7 @@ const Outstanding = (): React.JSX.Element => {
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="flex gap-4 mb-4 px-2">
+      <div className="flex controls gap-4 mb-4 px-2">
         <div className="form-control">
           <input
             type="text"
@@ -729,7 +705,6 @@ const Outstanding = (): React.JSX.Element => {
             value={filterBy}
             onChange={(e) => {
               setFilterBy(e.target.value as 'all' | 'current' | 'overdue')
-              setCurrentPage(1)
             }}
             aria-label="Filter outstanding sales"
           >
@@ -744,7 +719,6 @@ const Outstanding = (): React.JSX.Element => {
             onClick={() => {
               setSearchTerm('')
               setFilterBy('all')
-              setCurrentPage(1)
             }}
           >
             Clear Filters
@@ -774,8 +748,8 @@ const Outstanding = (): React.JSX.Element => {
           <span className="text-sm text-gray-500 ml-2">Loading outstanding balances...</span>
         </div>
       ) : (
-        <>
-          <table className="table table-zebra">
+        <div className="page-container h-full overflow-x-auto">
+          <table className="page table table-zebra table-pin-rows">
             <thead className="bg-accent">
               <tr>
                 <th onClick={() => handleSort('last_updated')} className="cursor-pointer">
@@ -791,22 +765,22 @@ const Outstanding = (): React.JSX.Element => {
                 <th onClick={() => handleSort('outstanding')} className="cursor-pointer">
                   Outstanding {sortBy === 'outstanding' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
-                <th>Actions</th>
+                <th className="controls">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {currentSales.length === 0 && !error ? (
+              {sortedSales.length === 0 && !error ? (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-gray-500">
                     {outstandingSales.length === 0
                       ? 'No outstanding balances found'
                       : searchTerm || filterBy !== 'all'
                         ? 'No results match your filters'
-                        : 'No results for current page'}
+                        : 'No results available'}
                   </td>
                 </tr>
               ) : (
-                currentSales.map((sale) => {
+                sortedSales.map((sale) => {
                   const agingInfo = getAgingInfo(sale.last_updated)
                   const isNearCreditLimit =
                     sale.Customer.creditLimit && sale.outstanding > sale.Customer.creditLimit * 0.8
@@ -838,10 +812,9 @@ const Outstanding = (): React.JSX.Element => {
                         {formatCurrency(sale.outstanding)}
                       </td>
                       <td>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 controls">
                           <button
                             className="btn btn-xs btn-primary"
-                            // onClick={() => handlePayment(sale.id, sale.outstanding, false)}
                             onClick={() => {
                               const modal = document.getElementById(
                                 'confirm'
@@ -871,65 +844,7 @@ const Outstanding = (): React.JSX.Element => {
               )}
             </tbody>
           </table>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex flex-row mt-1 ml-2 mr-4 gap-x-4 items-center">
-              <button
-                className="btn btn-xs btn-ghost btn-square"
-                onClick={handlePrevious}
-                disabled={currentPage === 1}
-              >
-                <img src={left} alt="Prev" />
-              </button>
-
-              <div className="flex flex-row gap-x-2 items-center">
-                <label htmlFor="page">Page:</label>
-                <input
-                  id="page"
-                  type="number"
-                  value={currentPage}
-                  onChange={handlePageChange}
-                  onKeyDown={handlePageKeyDown}
-                  className="input input-xs input-bordered w-16 text-center"
-                  min={1}
-                  max={totalPages}
-                />
-                <span className="text-sm text-gray-500">of {totalPages}</span>
-              </div>
-
-              <div className="flex flex-row gap-x-2 items-center">
-                <label htmlFor="limit">Show:</label>
-                <select
-                  id="limit"
-                  value={limit}
-                  onChange={handleLimitChange}
-                  className="select select-xs select-bordered"
-                >
-                  {[5, 12, 15].map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-sm text-nowrap text-gray-500">per page</span>
-              </div>
-
-              <button
-                className="btn btn-xs btn-ghost btn-square"
-                onClick={handleNext}
-                disabled={currentPage === totalPages}
-              >
-                <img src={right} alt="Next" />
-              </button>
-
-              <div className="ml-auto text-sm text-gray-500">
-                Showing {Math.min(startIndex + 1, sortedSales.length)}-
-                {Math.min(endIndex, sortedSales.length)} of {sortedSales.length} results
-              </div>
-            </div>
-          )}
-        </>
+        </div>
       )}
 
       {/* Payment Modal */}

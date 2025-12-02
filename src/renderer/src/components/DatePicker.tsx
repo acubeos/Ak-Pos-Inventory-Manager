@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import Datepicker from 'react-tailwindcss-datepicker'
-interface DatePickerCProps {
-  onDateChange: (dateRange: { startDate: string | null; endDate: string | null }) => void
+interface DatePickerProps {
+  onDateChange: (dateRange: { startDate: Date | null; endDate: Date | null }) => void
 }
 
-const DatePicker = ({ onDateChange }: DatePickerCProps): React.JSX.Element => {
+const DatePicker = ({ onDateChange }: DatePickerProps): React.JSX.Element => {
   const [value, setValue] = useState({
     startDate: null,
     endDate: null

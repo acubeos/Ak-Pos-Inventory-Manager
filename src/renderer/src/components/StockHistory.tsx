@@ -11,20 +11,30 @@ const StockHistory = (): JSX.Element => {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
 
-  const fetchStocks = async (): Promise<void> => {
-    try {
-      setLoading(true)
-      const result = await window.electronAPI?.stock.getAll({ page, limit })
-      setStocks(result?.stock || [])
-      setTotal(result?.total || 0)
-    } catch (error) {
-      console.error('Error fetching stock history:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
+    const fetchStocks = async (): Promise<void> => {
+      try {
+        setLoading(true)
+
+        // Check if API exists
+        if (!window.electronAPI?.stock?.getAll) {
+          console.error('Stock API not available')
+          return
+        }
+
+        const result = await window.electronAPI.stock.getAll({ page, limit })
+
+        // Debug the response
+        console.log('Full API Response:', result)
+
+        setStocks(result?.stock || [])
+        setTotal(result?.total || 0)
+      } catch (error) {
+        console.error('Error fetching stock history:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchStocks()
   }, [page, limit])
 
@@ -39,7 +49,6 @@ const StockHistory = (): JSX.Element => {
           <thead className="bg-accent">
             <tr>
               <th>Product</th>
-              <th>Transaction Type</th>
               <th>Quantity</th>
               <th>Date</th>
             </tr>
@@ -55,10 +64,8 @@ const StockHistory = (): JSX.Element => {
               stocks.map((stock) => (
                 <tr key={stock.id}>
                   <td>{stock.Product?.name}</td>
-                  <td>{stock.type}</td>
                   <td>{stock.quantity}</td>
                   <td>{formatDate(stock.created_at, true)}</td>
-                  <td>{stock.User?.username || 'System'}</td>
                 </tr>
               ))
             ) : (

@@ -29,7 +29,3 @@
     page-break-inside: avoid;
   }
 }
-
-.break-page {
-  page-break-after: always;
-}

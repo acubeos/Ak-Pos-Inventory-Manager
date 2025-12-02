@@ -634,6 +634,35 @@ export class DatabaseManager {
     `
     const params: any[] = []
 
+    // Add customer name filter
+    if (filters.name) {
+      query += ' AND c.name LIKE ?'
+      params.push(`%${filters.name}%`)
+    }
+
+    // Add date range filters
+    if (filters.from) {
+      query += ' AND DATE(s.created_at) >= ?'
+      params.push(filters.from)
+    }
+
+    if (filters.to) {
+      query += ' AND DATE(s.created_at) <= ?'
+      params.push(filters.to)
+    }
+    // Add sorting if provided
+    if (filters.sort) {
+      query += ` ORDER BY ${filters.sort}`
+    }
+
+    // Count total matching records BEFORE pagination
+    const countQuery = query.replace(
+      'SELECT s.*, c.name as customer_name, c.phone, c.address',
+      'SELECT COUNT(*) as count'
+    )
+    const total = await this.db.get(countQuery, params)
+
+    // Add pagination AFTER filters
     if (filters.limit) {
       query += ' LIMIT ?'
       params.push(filters.limit)
@@ -645,7 +674,6 @@ export class DatabaseManager {
     }
 
     const sales = await this.db.all(query, params)
-    const total = await this.db.get('SELECT COUNT(*) as count FROM sales')
 
     const formattedSales: Sale[] = sales.map((sale) => ({
       id: sale.id,

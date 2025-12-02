@@ -1,15 +1,72 @@
 import sale from '../assets/icons/outstanding-icon.png'
 import customer from '../assets/icons/customer-icon.png'
 import Outstanding from '../assets/icons/sale-icon.png'
+import { useEffect, useState } from 'react'
+import { formatCurrency } from '@renderer/helpers/general'
+import { SingleProduct } from 'src/main/api.types'
 
 interface Cards {
   title: string
   value: string | number
   icon?: string
-  badge?: string
+  badge?: number
 }
 
 const Cards = (): React.JSX.Element => {
+  const [total, setTotal] = useState(0)
+  const [outstanding, setOutstanding] = useState('')
+  const [products, setProducts] = useState<SingleProduct[]>([])
+
+  const fetchCustomers = async (): Promise<void> => {
+    const customers = await window.electronAPI?.customers.getAll()
+    setTotal(customers.data.total)
+  }
+  useEffect(() => {
+    fetchCustomers()
+  }, [])
+
+  const fetchOutstanding = async (): Promise<void> => {
+    const outstanding = await window.electronAPI?.payments.getOutstanding()
+    const total = outstanding.data.outstandingPayments
+      .map((item) => item.total_outstanding)
+      .reduce((a, b) => a + b, 0)
+    setOutstanding(formatCurrency(total))
+  }
+  useEffect(() => {
+    fetchOutstanding()
+  }, [])
+
+  const fetchProducts = async (): Promise<void> => {
+    const products = await window.electronAPI?.products.getAll()
+    setProducts(products.data.product || [])
+  }
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const cards: Cards[] = [
+    {
+      title: 'Daily Sale',
+      value: '#Admin only!',
+      icon: sale
+    },
+    {
+      title: 'Customers',
+      value: total,
+      icon: customer
+    },
+    {
+      title: 'Outstanding',
+      value: outstanding,
+      icon: Outstanding
+    },
+    {
+      title: 'Product Details',
+      value: 'Product Count',
+      badge: products.length
+    }
+  ]
+
   return (
     <div className="flex flex-wrap gap-2">
       {cards.map((card) => (
@@ -32,28 +89,5 @@ const Cards = (): React.JSX.Element => {
     </div>
   )
 }
-
-const cards: Cards[] = [
-  {
-    title: 'Daily Sale',
-    value: '#1,000,000',
-    icon: sale
-  },
-  {
-    title: 'Customers',
-    value: '200',
-    icon: customer
-  },
-  {
-    title: 'Outstanding',
-    value: '400,000',
-    icon: Outstanding
-  },
-  {
-    title: 'Product Details',
-    value: 'Product Count',
-    badge: '6'
-  }
-]
 
 export default Cards

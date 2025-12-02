@@ -112,6 +112,8 @@ export interface ApiFilters {
   numericFilters?: string
   page?: number
   limit?: number
+  from?: string
+  to?: string
 }
 export interface PaymentHistoryRecord {
   id: number
