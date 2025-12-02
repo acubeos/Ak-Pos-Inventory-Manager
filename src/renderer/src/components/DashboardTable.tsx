@@ -13,7 +13,7 @@ const DashboardTable = (): React.JSX.Element => {
   }
 
   const [sales, setSales] = useState<Sale[]>([])
-  const [filters, setFilters] = useState({
+  const [filters] = useState({
     from: formatDateForDB(new Date()),
     to: formatDateForDB(new Date()),
     limit: 10,

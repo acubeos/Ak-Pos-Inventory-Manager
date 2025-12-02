@@ -27,7 +27,7 @@ export interface SingleProduct {
   status: number
   last_updated: string
   created_at: string
-  stock: any
+  stock: Record<string, unknown> | null
 }
 export interface Product {
   product: SingleProduct[]
@@ -48,33 +48,9 @@ export interface AllStock {
   total: number
 }
 
-export interface Sale {
-  id: number
-  customer_id: number
-  customer_name: string
-  total: number
-  outstanding: number
-  products: any
-  Customer: any
-  status: boolean
-  outstanding_amount: number
-  total_amount: number
-  created_at: string
-  last_updated: string
-  total_paid: number
-}
 export interface AllSales {
   sales: Sale[]
   total: number
-}
-export interface Customer {
-  id: number
-  uuid: string
-  name: string
-  phone: string
-  address: string
-  created_at: string
-  updated_at: string
 }
 export interface AllCustomers {
   customers: Customer[]
@@ -115,71 +91,6 @@ export interface ApiFilters {
   from?: string
   to?: string
 }
-export interface PaymentHistoryRecord {
-  id: number
-  customer_id: number
-  sale_id: number | null
-  payment_amount: number
-  payment_method: string
-  payment_date: string
-  payment_type: string
-  reference_number: string | null
-  notes: string | null
-  created_by: number | null
-  created_at: string
-}
-
-export interface OutstandingPayment {
-  customer_id: number
-  customer_name: string
-  customer_phone: string | null
-  customer_address: string | null
-  credit_limit: number | null
-  payment_terms: string
-  is_credit_enabled: boolean
-  total_outstanding: number
-  last_updated: string
-  outstanding_sales_count: number
-  days_outstanding: number
-  sale_ids: string
-}
-
-export interface PaymentProcessData {
-  customerId: number
-  amount: number
-  paymentMethod?: string
-  notes?: string
-  saleIds?: number[]
-}
-
-export interface CustomerCreditUpdate {
-  customerId: number
-  creditLimit: number | null
-  paymentTerms: string
-  isCreditEnabled: boolean
-}
-
-export interface OutstandingFilters extends ApiFilters {
-  agingFilter?: 'all' | 'current' | 'overdue' | '31-60' | '61-90' | '90+'
-  searchTerm?: string
-}
-
-// Update existing Customer interface to include credit fields
-export interface Customer {
-  id: number
-  uuid: string
-  name: string
-  phone: string
-  address: string
-  credit_limit?: number
-  credit_balance?: number
-  payment_terms?: string
-  is_credit_enabled?: boolean
-  created_at: string
-  updated_at: string
-}
-
-// ===== ADD THESE INTERFACES TO YOUR EXISTING api.types.ts FILE =====
 
 // Payment-related interfaces
 export interface PaymentHistoryRecord {
@@ -260,7 +171,7 @@ export interface Sale {
   total_amount: number
   total_paid: number
   payment_status?: string // 'pending' | 'partial' | 'paid'
-  products: any[]
+  products: SingleProductSale[]
   status: number
   created_at: string
   last_updated: string
