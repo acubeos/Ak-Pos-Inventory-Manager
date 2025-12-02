@@ -1,105 +1,91 @@
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
+import { useEffect, useState } from 'react'
+
+interface MonthlySalesData {
+  month: string
+  sales: number
+  revenue: number
+  orders: number
+}
+
+interface ChartData {
+  name: string
+  sales: number
+}
 
 const RevenueCharts = (): React.JSX.Element => {
-  const data = [
-    {
-      name: 'Jan',
-      uv: 4.0,
-      pv: 2.4,
-      amt: 2400
-    },
-    {
-      name: 'Feb',
-      uv: 3.0,
-      pv: 1.398,
-      amt: 2210
-    },
-    {
-      name: 'Mar',
-      uv: 2.0,
-      pv: 9.8,
-      amt: 2290
-    },
-    {
-      name: 'Apr',
-      uv: 2.78,
-      pv: 3.908,
-      amt: 2000
-    },
-    {
-      name: 'May',
-      uv: 1.89,
-      pv: 4.8,
-      amt: 2181
-    },
-    {
-      name: 'Jun',
-      uv: 2.39,
-      pv: 3.8,
-      amt: 2500
-    },
-    {
-      name: 'Jul',
-      uv: 3.49,
-      pv: 4.3,
-      amt: 2100
-    },
-    {
-      name: 'Aug',
-      uv: 3.49,
-      pv: 4.3,
-      amt: 2100
-    },
-    {
-      name: 'Sept',
-      uv: 3.49,
-      pv: 4.3,
-      amt: 2100
-    },
-    {
-      name: 'Oct',
-      uv: 3.49,
-      pv: 4.3,
-      amt: 2100
-    },
-    {
-      name: 'Nov',
-      uv: 3.49,
-      pv: 4.3,
-      amt: 2100
-    },
-    {
-      name: 'Dec',
-      uv: 3.49,
-      pv: 4.3,
-      amt: 2100
+  const [chartData, setChartData] = useState<ChartData[]>([])
+
+  const monthMap: Record<string, string> = {
+    '01': 'Jan',
+    '02': 'Feb',
+    '03': 'Mar',
+    '04': 'Apr',
+    '05': 'May',
+    '06': 'Jun',
+    '07': 'Jul',
+    '08': 'Aug',
+    '09': 'Sep',
+    '10': 'Oct',
+    '11': 'Nov',
+    '12': 'Dec'
+  }
+
+  useEffect(() => {
+    const fetchMonthlyData = async (): Promise<void> => {
+      try {
+        const response = await window.electronAPI?.analytics.get()
+        if (response?.success && response?.data?.sales?.monthlyTrends) {
+          const monthlyTrends: MonthlySalesData[] = response.data.sales.monthlyTrends
+
+          const transformed = monthlyTrends.map((trend) => {
+            const [year, month] = trend.month.split('-')
+            const monthName = monthMap[month]
+
+            return {
+              name: `${monthName} ${year}`,
+              sales: trend.sales
+            }
+          })
+
+          setChartData(transformed)
+        }
+      } catch (error) {
+        console.error('Error fetching monthly sales data:', error)
+      }
     }
-  ]
+
+    fetchMonthlyData()
+  }, [])
 
   return (
     <>
       <AreaChart
         width={570}
         height={200}
-        data={data}
+        data={chartData}
         margin={{ top: 0, right: 20, left: -20, bottom: 0 }}
       >
         <defs>
-          <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
             <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
-            <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
           </linearGradient>
         </defs>
         <XAxis dataKey="name" />
         <YAxis />
         <CartesianGrid strokeDasharray="3 3" />
-        <Tooltip />
-        <Area type="monotone" dataKey="uv" stroke="#8884d8" fillOpacity={1} fill="url(#colorUv)" />
-        <Area type="monotone" dataKey="pv" stroke="#82ca9d" fillOpacity={1} fill="url(#colorPv)" />
+        <Tooltip
+          formatter={(value) => `₦ ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        />
+        <Area
+          type="monotone"
+          dataKey="sales"
+          stroke="#8884d8"
+          fillOpacity={1}
+          fill="url(#colorSales)"
+          name="Total Monthly Sales"
+        />
       </AreaChart>
     </>
   )
