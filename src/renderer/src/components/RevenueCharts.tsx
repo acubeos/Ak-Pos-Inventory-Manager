@@ -43,6 +43,36 @@ const RevenueCharts = (): React.JSX.Element => {
       uv: 3.49,
       pv: 4.3,
       amt: 2100
+    },
+    {
+      name: 'Aug',
+      uv: 3.49,
+      pv: 4.3,
+      amt: 2100
+    },
+    {
+      name: 'Sept',
+      uv: 3.49,
+      pv: 4.3,
+      amt: 2100
+    },
+    {
+      name: 'Oct',
+      uv: 3.49,
+      pv: 4.3,
+      amt: 2100
+    },
+    {
+      name: 'Nov',
+      uv: 3.49,
+      pv: 4.3,
+      amt: 2100
+    },
+    {
+      name: 'Dec',
+      uv: 3.49,
+      pv: 4.3,
+      amt: 2100
     }
   ]
 
