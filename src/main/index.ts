@@ -13,7 +13,8 @@ import {
   CustomerCreditUpdate,
   OutstandingFilters
 } from './api.types'
-import icon from '../../resources/icon.png?asset'
+
+const icon = join(__dirname, '../../resources/icon.png')
 
 let mainWindow: BrowserWindow
 
@@ -166,7 +167,7 @@ const setupIpcHandlers = (): void => {
   })
 
   // Utility handlers
-  ipcMain.handle('db:backup', async (_event) => {
+  ipcMain.handle('db:backup', async () => {
     return await dbOperations.backupDatabase()
   })
 
