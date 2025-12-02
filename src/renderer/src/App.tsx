@@ -10,7 +10,6 @@ import Outstanding from './components/OutstandingPage'
 import StockHistory from './components/StockHistory'
 import CustomerContact from './components/CustomerContact'
 import InventoryPage from './components/InventoryPage'
-import SettingsPage from './components/SettingsPage'
 
 function App(): React.JSX.Element {
   return (
@@ -28,7 +27,6 @@ function App(): React.JSX.Element {
           <Route path="stockHistory" element={<StockHistory />} />
           <Route path="customers" element={<CustomerContact />} />
           <Route path="inventory" element={<InventoryPage />} />
-          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </>

@@ -900,8 +900,8 @@ export class DatabaseOperations {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
       const backupPath = `backup_${timestamp}.db`
 
-      // This is now handled by the main process with file dialogs
-      // This method is kept for compatibility but actual backup is in index.ts
+      // This would involve copying the database file
+      // Implementation depends on your specific needs
 
       return {
         success: true,
@@ -919,8 +919,8 @@ export class DatabaseOperations {
 
   async restoreDatabase(): Promise<ApiResponse<boolean>> {
     try {
-      // This is now handled by the main process with file dialogs
-      // This method is kept for compatibility but actual restore is in index.ts
+      // This would involve restoring from the backup file
+      // Implementation depends on your specific needs
 
       return {
         success: true,
