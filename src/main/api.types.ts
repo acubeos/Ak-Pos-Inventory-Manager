@@ -48,21 +48,6 @@ export interface AllStock {
   total: number
 }
 
-export interface Sale {
-  id: number
-  customer_id: number
-  customer_name: string
-  total: number
-  outstanding: number
-  products: any
-  Customer: any
-  status: boolean
-  outstanding_amount: number
-  total_amount: number
-  created_at: string
-  last_updated: string
-  total_paid: number
-}
 export interface AllSales {
   sales: Sale[]
   total: number
