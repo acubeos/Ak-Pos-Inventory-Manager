@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 interface ElectronAPI {
   products: {
     create: (productData: CreateProductData) => Promise<any>
@@ -36,11 +35,9 @@ interface ElectronAPI {
   }
   utils: {
     backup: () => Promise<any>
-    exportDatabase: () => Promise<any>
-    importDatabase: () => Promise<any>
     showError: (title: string, message: string) => Promise<void>
     showMessage: (title: string, message: string) => Promise<void>
-    savePdf: () => Promise<any>
+    savePdf: () => Promise<>
   }
   payments: {
     process: (paymentData: PaymentProcessData) => Promise<any>

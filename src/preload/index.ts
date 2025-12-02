@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 console.log('--- The Preload Script is Running! ---')
 import { contextBridge, ipcRenderer } from 'electron'
 import {
@@ -119,8 +118,6 @@ const api = {
   // Utility APIs
   utils: {
     backup: (): Promise<any> => ipcRenderer.invoke('db:backup'),
-    exportDatabase: (): Promise<any> => ipcRenderer.invoke('db:export'),
-    importDatabase: (): Promise<any> => ipcRenderer.invoke('db:import'),
     showError: (title: string, message: string): Promise<any> =>
       ipcRenderer.invoke('app:showError', title, message),
     showMessage: (title: string, message: string): Promise<any> =>
